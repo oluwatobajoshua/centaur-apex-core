@@ -1,0 +1,39 @@
+# Rust
+constitution/target/
+**/*.rs.bk
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+/.venv/
+venv/
+.pytest_cache/
+
+# Node / NestJS
+gateway/node_modules/
+gateway/dist/
+gateway/coverage/
+npm-debug.log*
+
+# Next.js dashboard
+dashboard/.next/
+dashboard/node_modules/
+dashboard/out/
+
+# Env / secrets — NEVER commit credentials or keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+vault/
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

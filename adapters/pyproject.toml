@@ -1,0 +1,10 @@
+﻿[project]
+name = "protocol_agnostic_adapters"
+version = "0.1.0"
+description = "Universal intent routing and exchange abstraction layer for Centaur-Apex"
+dependencies = [
+    "pydantic>=2.0.0",
+    "requests>=2.31.0",
+    "websockets>=11.0"
+]
+requires-python = ">=3.10"
