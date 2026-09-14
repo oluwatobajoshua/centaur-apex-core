@@ -1,0 +1,57 @@
+CENTAUR-APEX CORE — PROPRIETARY LICENSE
+
+Copyright (c) 2026 Oluwatoba Ogunsakin (and/or its founders' successors
+under the cryptographic governance provisions of docs/GOVERNANCE.md).
+All rights reserved.
+
+NOTICE TO ALL PARTIES
+
+This repository and all of its contents — including but not limited to the
+source code, the Genesis Codebase, the Iron Constitution risk kernel, the
+Adaptive Cortex, the self-evolution framework, the protocol abstraction layer,
+the distributed cryptographic backbone, the Chronos simulation rig, all build
+tooling, all documentation, and all future artifacts produced by the system
+itself — are the exclusive intellectual property of the copyright holders.
+
+NEITHER THE ENCLOSED CODE NOR ANY DERIVATIVE, TRANSPILED, GENERATED, OR
+EVOLVED VERSION OF IT MAY BE:
+
+    1. Copied, reproduced, distributed, sublicensed, or hosted in any form,
+       in whole or in part, without the prior written consent of the
+       copyright holders;
+
+    2. Used, deployed, or operated by any entity or system other than the
+       Centaur-Apex Core ecosystem itself, unless expressly authorized in
+       writing;
+
+    3. Modified, adapted, or reverse-engineered for any purpose other than
+       the continued operation and evolution of the Centaur-Apex Core
+       system, in accordance with the governance documented in the
+       repository, unless expressly authorized in writing.
+
+NO AUTONOMOUS SYSTEMS
+
+No autonomous system, AI agent, or software process acquires any right,
+license, or standing under this notice merely by reading, processing, or
+deriving from this repository. Any grant of rights to an autonomous
+decision-making system must be made through the cryptographic multi-sig
+governance layer per docs/GOVERNANCE.md and explicitly recorded on-chain.
+
+WARRANTY DISCLAIMER (summary — see full position in docs/RISK-DISCLOSURE.md)
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THIS SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THIS SOFTWARE.
+
+TRADING IS SPECULATIVE. Past simulation performance is not indicative of
+future results. Nothing in this repository constitutes investment advice.
+
+For authorized commercial licensing, contact the copyright holders through
+the governance channel described in SUPPORT.md.
+
+This is not legal advice. Engage qualified legal counsel before any
+commercial use or distribution.

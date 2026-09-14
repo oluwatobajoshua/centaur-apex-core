@@ -1,0 +1,11 @@
+# Default owners: the project founder.
+* @oluwatobajoshua
+
+# Constitution (G1) — formal review required for every change.
+constitution/** @oluwatobajoshua
+
+# Governance law — touch AGENTS.md only via governance review.
+AGENTS.md @oluwatobajoshua
+
+# Docs gates.
+docs/** @oluwatobajoshua

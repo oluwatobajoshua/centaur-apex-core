@@ -1,0 +1,28 @@
+# Repository metadata — configure in GitHub UI (Settings → General / About).
+# This file exists to keep the choices explicit and reviewable.
+
+description: >-
+  A self-sustaining, antifragile autonomous trading ecosystem engineered for a
+  minimum 100-year operational lifespan. Genesis DNA: deterministic risk core
+  (Rust) + probabilistic cortex (Python) + self-evolution framework + mesh/PQC.
+
+topics:
+  - autonomous-trading
+  - rust
+  - python
+  - deterministic-safety
+  - self-evolving-systems
+  - post-quantum
+  - bft
+  - ai-trading
+  - 100-year-system
+
+homepage: https://github.com/oluwatobajoshua/centaur-apex-core
+
+# Private: this is a closed-source proprietary project.
+visibility: private
+
+has_wiki: false
+has_projects: false
+
+# Social preview: add docs/assets/social-preview.png (1200x630) for the About box.

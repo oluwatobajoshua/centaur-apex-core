@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a change to the Genesis Codebase.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before proposing a feature, answer the Grading Question from
+        `AGENTS.md` §5: **"If the system's evolution engine existed today,
+        would it own this file?"** If yes, the correct feature is the
+        *mechanism* that lets the system build it — not the artifact itself.
+  - type: textarea
+    id: proposal
+    attributes:
+      label: The mechanism vs. the artifact
+      description: Describe what should be built and how it qualifies as Genesis DNA (G1–G9) or machinery for S1–S7.
+    validations:
+      required: true
+  - type: textarea
+    id: alternative
+    attributes:
+      label: What it replaces
+      description: Which existing component does this supersede, and how will the Evolution Sub-Agent own it long-term?
+    validations:
+      required: false
+  - type: checkboxes
+    id: law
+    attributes:
+      label: Law compliance
+      options:
+        - label: I confirm this adds a mechanism, not a hardcoded 100-year instantiation.
+          required: true
