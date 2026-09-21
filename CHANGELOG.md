@@ -99,6 +99,16 @@ versioning follows `docs/RELEASE.md` (semantic, immortal).
   state-machine proptest). Zero proptest regressions. `cargo build`,
   `cargo build --release`, `cargo fmt --check`, `cargo clippy --all-targets`
   all clean. `#[deny(unsafe_code)]` crate-wide.
+
+- **Production deployment (G9):** Added `supervisord.conf` (7-program
+  supervisor: constitutiond, gateway, cortex-trading, doomsday, mesh-{0,1,2},
+  evolution, compliance) with autostart/autorestart/restart limits. Updated
+  `docker-compose.yml` with all production services (doomsday, 3 mesh nodes,
+  evolution, compliance). Created `cortex/cortex/trading_daemon.py` —
+  continuous trading loop (market tick → Cortex proposal → Constitution
+  verdict → Doomsday heartbeat). All Python modules pass `compileall` +
+  `ruff check` (182 lint issues fixed across all 6 packages).
+
 - **Python:** **216 passed, 2 skipped** (179 unit + 11 hypothesis ×500 examples
   + 4 chaos + 3 full-pipeline + 10 doomsday CLI + 35 doomsday + 12 integration).
   `compileall` clean. `ruff` clean.

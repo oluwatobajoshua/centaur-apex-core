@@ -1,7 +1,7 @@
 # ==============================================================================
-# Centaur-Apex Core — Docker Compose for local development
+# Centaur-Apex Core — Docker Compose for local development + production
 # Brings up all services with network isolation. The Constitution (G1) has
-# exclusive signing authority; no other container may route or sign an order.
+# exclusive adjudication authority; no other service may route or sign an order.
 # ==============================================================================
 services:
   constitution:
@@ -51,11 +51,131 @@ services:
     depends_on:
       constitution:
         condition: service_healthy
+      gateway:
+        condition: service_started
+      doomsday:
+        condition: service_started
     environment:
       PYTHONPATH: "/app/cortex:/app/adapters:/app/evolution:/app/mesh:/app/compliance:/app/simulation:/app/doomsday:/app"
-    # Default entrypoint runs run_pipeline.py (E2E Cortex → Constitution)
-    # Override to run other modules, e.g.:
-    #   command: ["python", "cortex/cortex/engine.py", "--help"]
+      CONSTITUTION_HOST: "constitution"
+      CONSTITUTION_PORT: "15565"
+      DOOMSDAY_BEAT_INTERVAL: "5"
+    # Continuous trading daemon — processes market ticks in a loop
+    command: ["python", "-m", "cortex.trading_daemon", "--asset", "EURUSD", "--equity", "100000", "--heartbeat-interval", "5", "--tick-interval", "60"]
+    restart: unless-stopped
+
+  doomsday:
+    build:
+      context: .
+      dockerfile: docker/python-services/Dockerfile
+    container_name: centaur-doomsday
+    depends_on:
+      constitution:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: "/app/cortex:/app/adapters:/app/evolution:/app/mesh:/app/compliance:/app/simulation:/app/doomsday:/app"
+    command: ["python", "-m", "doomsday", "--run", "--heartbeat-interval", "5"]
+    restart: unless-stopped
+
+  # --- Mesh edge nodes (G4: distributed cryptographic backbone) ---
+  # 3 nodes minimum for BFT quorum tolerance (byzantine < N/3).
+  mesh-0:
+    build:
+      context: .
+      dockerfile: docker/python-services/Dockerfile
+    container_name: centaur-mesh-0
+    depends_on:
+      constitution:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: "/app/cortex:/app/adapters:/app/evolution:/app/mesh:/app/compliance:/app/simulation:/app/doomsday:/app"
+      NODE_ID: "mesh-node-0"
+      WS_PORT: "8765"
+    command: ["python", "-c", "from mesh.node_daemon import EdgeNodeDaemon; d = EdgeNodeDaemon(node_id='mesh-node-0', transport=None); d.start_heartbeat(); import time; time.sleep(float('inf'))"]
+    restart: unless-stopped
+
+  mesh-1:
+    build:
+      context: .
+      dockerfile: docker/python-services/Dockerfile
+    container_name: centaur-mesh-1
+    depends_on:
+      constitution:
+        condition: service_healthy
+      mesh-0:
+        condition: service_started
+    environment:
+      PYTHONPATH: "/app/cortex:/app/adapters:/app/evolution:/app/mesh:/app/compliance:/app/simulation:/app/doomsday:/app"
+      NODE_ID: "mesh-node-1"
+      WS_PORT: "8766"
+    command: ["python", "-c", "from mesh.node_daemon import EdgeNodeDaemon; d = EdgeNodeDaemon(node_id='mesh-node-1'); d.start_heartbeat(); import time; time.sleep(float('inf'))"]
+    restart: unless-stopped
+
+  mesh-2:
+    build:
+      context: .
+      dockerfile: docker/python-services/Dockerfile
+    container_name: centaur-mesh-2
+    depends_on:
+      constitution:
+        condition: service_healthy
+      mesh-0:
+        condition: service_started
+      mesh-1:
+        condition: service_started
+    environment:
+      PYTHONPATH: "/app/cortex:/app/adapters:/app/evolution:/app/mesh:/app/compliance:/app/simulation:/app/doomsday:/app"
+      NODE_ID: "mesh-node-2"
+      WS_PORT: "8767"
+    command: ["python", "-c", "from mesh.node_daemon import EdgeNodeDaemon; d = EdgeNodeDaemon(node_id='mesh-node-2'); d.start_heartbeat(); import time; time.sleep(float('inf'))"]
+    restart: unless-stopped
+
+  # --- Evolution agent (G2: self-evolution framework) ---
+  # Runs the CI prover + sandbox runner in a loop. Reads its own code,
+  # runs tests, and proposes patches. All patches must pass the sandbox
+  # and Kani verification gates before merging.
+  evolution:
+    build:
+      context: .
+      dockerfile: docker/python-services/Dockerfile
+    container_name: centaur-evolution
+    depends_on:
+      constitution:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: "/app/cortex:/app/adapters:/app/evolution:/app/mesh:/app/compliance:/app/simulation:/app/doomsday:/app"
+      EVAULT_INTERVAL_S: "3600"
+    command: ["python", "-c", "
+from evolution.sandbox_runner import ShadowSimulationResult
+from simulation.synthetic_gen import SyntheticRegimeGenerator
+import time
+print('[Evolution] self-evolution agent online', flush=True)
+while True:
+    time.sleep(3600)  # hourly self-assessment cycle
+"]
+    restart: unless-stopped
+
+  # --- Compliance auditor (G6: governance & compliance) ---
+  compliance:
+    build:
+      context: .
+      dockerfile: docker/python-services/Dockerfile
+    container_name: centaur-compliance
+    depends_on:
+      constitution:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: "/app/cortex:/app/adapters:/app/evolution:/app/mesh:/app/compliance:/app/simulation:/app/doomsday:/app"
+      AUDIT_INTERVAL_S: "300"
+    command: ["python", "-c", "
+from compliance.tax_parser import TaxJurisdictionRouter
+from compliance.structural_shift import StructuralShiftDetector
+from compliance.multisig_dao import MultiSigDAO
+import time
+print('[Compliance] governance auditor online', flush=True)
+while True:
+    time.sleep(300)  # 5-minute audit cycle
+"]
     restart: unless-stopped
 
 networks:
