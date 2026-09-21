@@ -5,6 +5,12 @@
 > of the trading system. It is a *procedure*, not strategy, alpha, or venue logic.
 > Classification: **G6** (governance & zero-human operational control).
 
+
+> **For development/testing without the ceremony:** see
+> [`docs/DEV-MODE.md`](DEV-MODE.md) for instructions on running the full system
+> on any laptop with placeholder keys. The air-gap ceremony below is **required
+> for production** but not for local validation.
+
 ---
 
 ## 1. Purpose
