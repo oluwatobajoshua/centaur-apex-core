@@ -47,7 +47,10 @@ by a quorum of designated trustees (initially: the founding engineers).
 - The public keys are hardcoded into `constitution/src/secure_keys.rs`
   (PQC placeholder: the real keys are added during the **Genesis Ceremony**).
 
-This is a skeleton. The full ceremony is described below.
+This is a skeleton. The full ceremony procedure is documented in
+`docs/GENESIS-CEREMONY.md`, the on-chain time-lock governance contract design
+in `docs/TIMELOCK-GOVERNANCE.md`, and the Sepolia testnet rehearsal in
+`docs/GENESIS-CEREMONY-DRYRUN.md`. See also TRACKER Phase 15.
 
 ---
 

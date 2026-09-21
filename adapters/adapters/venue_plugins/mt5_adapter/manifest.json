@@ -1,0 +1,14 @@
+{
+  "name": "mt5_adapter",
+  "version": "0.1.0",
+  "api_version": 1,
+  "venue_kind": "broker",
+  "entry_point": "AdapterFactory",
+  "methods": ["connect", "execute_order", "health_check"],
+  "sides": ["Buy", "Sell"],
+  "order_types": [
+    { "type": "MARKET", "time_in_force": "IOC" },
+    { "type": "MARKET", "time_in_force": "GTC" }
+  ],
+  "sandboxed": true
+}

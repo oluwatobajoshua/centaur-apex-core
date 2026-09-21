@@ -112,7 +112,7 @@ Any change intended for `constitution/` (G1) must:
 
 - **Zero hardcoded secrets.** Keys live in HSM / PQC vaults, never in the repo.
 - **DNS/schema over code.** New venues/strategies/asset classes are declared in schemas (`adapters/schemas/`), not hand-written logic.
-- **Formal verification where possible.** Rust invariants must remain Kani-provable; don't introduce unchecked arithmetic that defeats it.
+- [ ] **Formal verification where possible.** Rust invariants must remain Kani-provable; don't introduce unchecked arithmetic that defeats it. Proptest fuzzes all f64 inputs (NaN/inf/negative) — 27 total tests, bug found + fixed (infinite equity validation gap). Python `hypothesis` adds 11 property tests (500 examples each).
 - **Sandbox everything.** Any new executable logic goes through Chromos sandboxing before it can be trusted.
 - **Never extend the endpoint with business logic.** The Constitution is a pure gate — it approves/rejects/downsizes. It does not decide *what* to trade.
 
@@ -128,3 +128,4 @@ A change is "done" only when:
 - [ ] Python modules pass `python -m py_compile`.
 - [ ] No secrets, credentials, or private keys are present.
 - [ ] Change aligns with one of G1–G9, or intentionally adds machinery for S1–S7.
+- [ ] **`TRACKER.md` is updated immediately.** The corresponding task item is checked off, and any newly discovered tasks are added to the appropriate phase or backlog. This is a hard gate — a session that modifies code but leaves the tracker stale is not done.

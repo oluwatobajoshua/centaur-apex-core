@@ -1,12 +1,14 @@
+#![deny(unsafe_code)]
+
 pub mod invariants;
 pub mod ipc;
 pub mod secure_keys;
 pub mod state_machine;
 pub mod tmr_voter;
 
+use invariants::RiskParameters;
 use serde::{Deserialize, Serialize};
 use state_machine::{ConstitutionKernel, SystemOperationalState};
-use invariants::RiskParameters;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum OrderDirection {
@@ -87,5 +89,17 @@ impl ConstitutionService {
 
     pub fn emergency_counter(&self) -> u64 {
         self.kernel.emergency_count()
+    }
+
+    pub fn transition_counter(&self) -> u64 {
+        self.kernel.transition_count()
+    }
+
+    pub fn transition_history(&self) -> Vec<(String, String)> {
+        self.kernel
+            .transition_history()
+            .iter()
+            .map(|(from, to)| (format!("{from:?}"), format!("{to:?}")))
+            .collect()
     }
 }

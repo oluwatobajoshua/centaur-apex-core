@@ -139,9 +139,23 @@ or
 {
   "system_state": "Normal",
   "proposals_seen": 120,
-  "emergencies": 0
+  "emergencies": 0,
+  "transitions": 5,
+  "state_history": [
+    ["Normal", "SoftDeleveraging"],
+    ["SoftDeleveraging", "Normal"]
+  ]
 }
 ```
+
+- `transitions` — monotonic lifetime transition counter (`u64`).
+- `state_history` — bounded journal (last 64 transitions, oldest dropped).
+  Kept small so the frame respects the 16KB protocol limit; the journal
+  bounds kernel memory over the operational lifespan.
+
+**Note on recovery:** `AttemptRecovery` is two-phase. A single valid proof moves
+`EmergencyHalt → AutonomousRecovery`; a second valid proof moves
+`AutonomousRecovery → Normal`. Invalid proofs never advance the FSM.
 
 ---
 

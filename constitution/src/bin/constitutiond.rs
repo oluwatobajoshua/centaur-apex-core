@@ -1,23 +1,40 @@
 use iron_constitution::invariants::RiskParameters;
-use iron_constitution::ipc::MAX_FRAME_BYTES;
-use iron_constitution::{ConstitutionService, ipc::IpcServer};
+use iron_constitution::ipc::{IpcServer, MAX_FRAME_BYTES};
+use iron_constitution::ConstitutionService;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
-const DEFAULT_BIND: &str = "127.0.0.1:15565";
+fn resolve_bind_address() -> String {
+    let host = std::env::var("CONSTITUTION_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = std::env::var("CONSTITUTION_PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(15565);
+    format!("{host}:{port}")
+}
 
 fn main() {
-    let listener = TcpListener::bind(DEFAULT_BIND).expect("failed to bind constitutiond");
-    eprintln!("[constitutiond] Iron Constitution listening on {DEFAULT_BIND}");
+    // Single Constitution kernel for the daemon's lifetime, shared across all
+    // TCP connections so kernel state (FSM, verdict history) is persistent.
+    let server = Arc::new(Mutex::new(IpcServer::new(ConstitutionService::new(
+        RiskParameters::from_env_or_default(),
+    ))));
+
+    let bind_addr = resolve_bind_address();
+    let listener = TcpListener::bind(&bind_addr).unwrap_or_else(|e| {
+        eprintln!("[constitutiond] failed to bind {bind_addr}: {e}");
+        std::process::exit(1);
+    });
+    eprintln!("[constitutiond] Iron Constitution listening on {bind_addr}");
 
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
+                let server = Arc::clone(&server);
                 thread::spawn(move || {
-                    let service = ConstitutionService::new(RiskParameters::default());
-                    let mut server = IpcServer::new(service);
-                    let _ = handle_connection(stream, &mut server);
+                    let _ = handle_connection(stream, &server);
                 });
             }
             Err(e) => eprintln!("[constitutiond] accept error: {e}"),
@@ -25,7 +42,7 @@ fn main() {
     }
 }
 
-fn handle_connection(mut stream: TcpStream, server: &mut IpcServer) -> std::io::Result<()> {
+fn handle_connection(mut stream: TcpStream, server: &Arc<Mutex<IpcServer>>) -> std::io::Result<()> {
     let mut header = [0u8; 4];
     loop {
         let n = read_full(&mut stream, &mut header)?;
@@ -43,7 +60,11 @@ fn handle_connection(mut stream: TcpStream, server: &mut IpcServer) -> std::io::
         let mut frame = vec![0u8; frame_len];
         read_full(&mut stream, &mut frame)?;
 
-        let response = server.handle_frame(&frame);
+        // Lock per frame: one in-flight evaluation, persistent kernel state.
+        let response = server
+            .lock()
+            .expect("constitution kernel poisoned")
+            .handle_frame(&frame);
         match response {
             Ok(resp) => {
                 write_frame(&mut stream, resp.as_bytes())?;

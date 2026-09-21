@@ -3,6 +3,8 @@ import socket
 import struct
 from dataclasses import dataclass
 
+from typing_extensions import Self
+
 
 @dataclass
 class ConstitutionStatus:
@@ -73,7 +75,7 @@ class ConstitutionIPCClient:
             self._session_sock.close()
             self._session_sock = None
 
-    def __enter__(self) -> "ConstitutionIPCClient":
+    def __enter__(self) -> Self:
         return self.open_session()
 
     def __exit__(self, *exc) -> None:

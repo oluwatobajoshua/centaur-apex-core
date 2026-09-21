@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "immortal_compliance"
 version = "0.1.0"
 description = "Autonomous regulatory tracking, tax compliance, and cryptographic governance for Centaur-Apex"

@@ -15,10 +15,11 @@ mkdir -p constitution/src/bin constitution/proofs \
          cortex/cortex cortex/models cortex/tests \
          evolution/evolution evolution/patches evolution/tests \
          adapters/adapters/venue_plugins adapters/schemas adapters/tests \
-         mesh/mesh mesh/microgrid mesh/tests \
+         mesh/mesh mesh/mesh/microgrid mesh/tests \
          compliance/compliance compliance/governance compliance/tests \
          simulation/simulation simulation/tests \
-         docs .github/workflows docker
+          docs .github/workflows docker \
+          docker/constitution docker/gateway docker/python-services
 
 # 2. constitution/Cargo.toml
 cat > constitution/Cargo.toml <<'EOF'

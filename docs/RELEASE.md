@@ -54,7 +54,7 @@ git pull origin main
 # Run the full gate suite (blocking any failure)
 cargo build --release --manifest-path constitution/Cargo.toml
 cargo test --manifest-path constitution/Cargo.toml
-python -m py_compile cortex/cortex/*.py adapters/adapters/*.py simulation/simulation/*.py mesh/mesh/*.py compliance/compliance/*.py evolution/evolution/*.py
+python -m compileall -q cortex adapters simulation mesh compliance evolution
 python simulation/tests/integration_chronos.py
 python run_pipeline.py
 ```

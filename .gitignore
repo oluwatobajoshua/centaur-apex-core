@@ -1,6 +1,7 @@
 # Rust
 constitution/target/
 **/*.rs.bk
+constitution/proptest-regressions/
 
 # Python
 __pycache__/

@@ -3,9 +3,11 @@
 # never hand-finalized. This file is a place-holder regime to prove the pipeline;
 # the Evolution Sub-Agent + Cortex own its replacement. Do NOT treat these
 # constants/heuristics as permanent 100-year alpha.
+import argparse
+import json
 import time
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 
 from cortex.proposal_api import OrderDirection, TradeProposal
 
@@ -23,7 +25,7 @@ class CortexEngine:
         self.asset_id = asset_id
         self.risk_profile = risk_profile
 
-    def evaluate_market_tick(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    def evaluate_market_tick(self, market_data: dict[str, Any]) -> dict[str, Any]:
         current_price = float(market_data.get("price", 0.0) or 0.0)
         equity = float(market_data.get("account_equity", 10000.0) or 10000.0)
         momentum = bool(market_data.get("momentum_signal", False))
@@ -60,3 +62,37 @@ class CortexEngine:
             "timestamp": int(time.time()),
             "proposal": proposal.model_dump(),
         }
+
+
+def main(argv=None) -> int:
+    """CLI entrypoint used by the gateway's Cortex orchestration bridge.
+
+    Emits a single proposal from normalized market inputs:
+    `python -m cortex.engine --asset BTC-PERP --price 100 --equity 50000
+        --trend bullish --momentum 1`
+    """
+    parser = argparse.ArgumentParser(description="Cortex proposal engine (bootstrap)")
+    parser.add_argument("--asset", default="SYNTH-PERP")
+    parser.add_argument("--price", type=float, default=100.0)
+    parser.add_argument("--equity", type=float, default=10_000.0)
+    parser.add_argument("--trend", default="bullish", choices=["bullish", "bearish", "neutral"])
+    parser.add_argument("--momentum", type=int, default=1, choices=[0, 1])
+    parser.add_argument("--volatility", type=float, default=0.0)
+    args = parser.parse_args(argv)
+
+    engine = CortexEngine(asset_id=args.asset)
+    result = engine.evaluate_market_tick(
+        {
+            "price": args.price,
+            "account_equity": args.equity,
+            "trend": args.trend,
+            "momentum_signal": bool(args.momentum),
+            "volatility": args.volatility,
+        }
+    )
+    print(json.dumps(result))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

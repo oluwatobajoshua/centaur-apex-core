@@ -107,7 +107,7 @@ route or sign an order (Invariant I5).
 
 | Component | State model |
 |-----------|-------------|
-| Constitution (per-connection) | Stateless across connections; state persists only within a single TCP session |
+| Constitution (per-daemon) | Persistent across TCP connections; single kernel in `Arc<Mutex<ConstitutionKernel>>` shared across all connections (Phase 10.1); state persists for the daemon's lifetime, reset only on daemon restart |
 | TMR voter | Three constitution replicas evaluate the same proposal; majority rules |
 | Cortex | In-memory market context; proposer state is ephemeral per tick |
 | Chronos simulation | Synthetic equity/drawdown tracking in `chronic_stress.py`; no persistence across runs |

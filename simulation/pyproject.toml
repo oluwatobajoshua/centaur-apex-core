@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "chronos_simulator"
 version = "0.1.0"
 description = "Accelerated-time synthetic market stress rig for Centaur-Apex"

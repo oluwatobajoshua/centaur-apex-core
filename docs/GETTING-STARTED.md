@@ -39,7 +39,7 @@ Verify the unit tests:
 ```powershell
 cargo test --manifest-path constitution/Cargo.toml
 ```
-Expected: `6 passed; 0 failed`.
+Expected: `27 passed; 0 failed` (17 unit + 10 proptest/regression).
 
 ---
 
@@ -71,7 +71,8 @@ python run_pipeline.py
 
 ## 5. Try the CLI bridge directly
 
-Send a heartbeat:
+Pipe JSON via stdin (avoids PowerShell native-command quoting issues with
+embedded `"` characters):
 
 ```powershell
 '{"protocol_version":1,"request_id":"t","opcode":"Heartbeat","payload":"{}"}' | & "constitution\target\release\constitution_cli.exe"
@@ -81,7 +82,7 @@ Send a heartbeat:
 Send an evaluation (approved case — 50K notional on 1M equity):
 
 ```powershell
-& "constitution\target\release\constitution_cli.exe" '{"protocol_version":1,"request_id":"t","opcode":"EvaluateProposal","payload":"{\"portfolio\":{\"timestamp\":1,\"total_equity\":1000000,\"cash_balance\":900000,\"high_water_mark\":1000000,\"open_positions\":[]},\"proposal\":{\"proposal_id\":\"p\",\"asset_id\":\"EURUSD\",\"direction\":\"Buy\",\"target_notional\":50000,\"max_acceptable_slippage\":0.001}}"}}'
+'{"protocol_version":1,"request_id":"t","opcode":"EvaluateProposal","payload":"{\"portfolio\":{\"timestamp\":1,\"total_equity\":1000000,\"cash_balance\":900000,\"high_water_mark\":1000000,\"open_positions\":[]},\"proposal\":{\"proposal_id\":\"p\",\"asset_id\":\"EURUSD\",\"direction\":\"Buy\",\"target_notional\":50000,\"max_acceptable_slippage\":0.001}}"}' | & "constitution\target\release\constitution_cli.exe"
 # {"verdict":{"Approved":{"adjusted_notional":50000.0}},"system_state":"Normal"}
 ```
 
@@ -98,7 +99,43 @@ Constitution. Expect ~1-2 minutes.
 
 ---
 
-## 7. Next steps
+## 7. Run the full-pipeline integration test
+
+```powershell
+python simulation/tests/integration_full_pipeline.py
+```
+
+Validates Cortex → Constitution → MockExchangeAdapter end-to-end:
+feeds 5 market scenarios, converts approved proposals to `UniversalOrderIntent`
+via `adapters/proposal_bridge.py`, and executes on the MockExchangeAdapter.
+
+---
+
+## 8. Run chaos engineering scenarios
+
+```powershell
+python simulation/tests/chaos_engine.py
+```
+
+Injects three controlled failures:
+1. Corrupted IPC packets (invalid JSON, wrong version, oversized frames)
+2. Daemon crash (TCP sever, connection-loss detection)
+3. Flash crash (extreme SyntheticRegimeGenerator shocks → EmergencyHalt → recovery)
+
+---
+
+## 9. Doomsday dead-man switch self-test
+
+```powershell
+python -m doomsday --self-test
+```
+
+Validates the Doomsday FSM (ARMED→WATCHING→ESCALATING→LIQUIDATING→DORMANT)
+and the governance-key disarm path (I7: zero-human override).
+
+---
+
+## 10. Next steps
 
 | Module | Read |
 |--------|------|

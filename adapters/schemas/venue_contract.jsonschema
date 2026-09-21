@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://centaur-apex.core/schemas/venue-contract/v1",
+  "title": "Venue Plugin Contract",
+  "description": "Manifest contract every venue connector plugin MUST satisfy before the Discovery Agent may load it. Venue plugins (AGENTS.md S1/S6) are system-owned artifacts; this schema is the Genesis-mandated rejection gate. Genesis DNA (G3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "version", "api_version", "entry_point", "methods", "sides", "order_types"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "api_version": { "const": 1 },
+    "venue_kind": { "enum": ["exchange", "broker", "custodian"] },
+    "entry_point": { "const": "AdapterFactory" },
+    "methods": {
+      "type": "array",
+      "items": { "enum": ["connect", "execute_order", "health_check"] },
+      "minItems": 3,
+      "uniqueItems": true,
+      "contains": { "const": "execute_order" }
+    },
+    "sides": {
+      "description": "Subset of the canonical side vocabulary the venue can route.",
+      "type": "array",
+      "items": { "$ref": "https://centaur-apex.core/schemas/order-types/v1#/$defs/side" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "order_types": {
+      "description": "Order type / time-in-force combinations the venue can route, drawn from the canonical vocabulary.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "time_in_force"],
+        "properties": {
+          "type": { "$ref": "https://centaur-apex.core/schemas/order-types/v1#/$defs/orderType" },
+          "time_in_force": { "$ref": "https://centaur-apex.core/schemas/order-types/v1#/$defs/timeInForce" }
+        }
+      },
+      "minItems": 1
+    },
+    "configuration": {
+      "description": "Optional JSON schema describing plugin runtime configuration.",
+      "type": "object"
+    },
+    "sandboxed": { "type": "boolean" }
+  }
+}

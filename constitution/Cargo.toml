@@ -11,6 +11,7 @@ serde_json = "1.0"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
 
 [dev-dependencies]
+proptest = "1.4"
 
 [[bin]]
 name = "constitutiond"

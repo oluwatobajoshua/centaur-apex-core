@@ -69,8 +69,8 @@ impl IpcServer {
 
         match envelope.opcode {
             IpcOpcode::EvaluateProposal => {
-                let req: EvaluateProposalRequest =
-                    serde_json::from_str(&envelope.payload).map_err(|_| IpcError::MalformedPayload)?;
+                let req: EvaluateProposalRequest = serde_json::from_str(&envelope.payload)
+                    .map_err(|_| IpcError::MalformedPayload)?;
                 let verdict = self
                     .constitution
                     .handle_incoming_request(&req.portfolio, &req.proposal);
@@ -85,6 +85,8 @@ impl IpcServer {
                     "system_state": format!("{:?}", self.constitution.get_status()),
                     "proposals_seen": self.constitution.proposal_counter(),
                     "emergencies": self.constitution.emergency_counter(),
+                    "transitions": self.constitution.transition_counter(),
+                    "state_history": self.constitution.transition_history(),
                 });
                 Ok(serde_json::to_string(&response).map_err(|_| IpcError::SerializationFailed)?)
             }
@@ -140,8 +142,8 @@ fn verify_ipc_no_panic() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ConstitutionService, OrderDirection, Position, TradeProposal};
     use crate::invariants::RiskParameters;
+    use crate::{ConstitutionService, OrderDirection, Position, TradeProposal};
 
     fn state(equity: f64) -> PortfolioState {
         PortfolioState {
@@ -196,7 +198,10 @@ mod tests {
         );
         let resp = server.handle_frame(raw.as_bytes()).unwrap();
         let parsed: EvaluateProposalResponse = serde_json::from_str(&resp).unwrap();
-        assert!(matches!(parsed.verdict, ConstitutionVerdict::Approved { .. }));
+        assert!(matches!(
+            parsed.verdict,
+            ConstitutionVerdict::Approved { .. }
+        ));
     }
 
     #[test]
@@ -253,5 +258,79 @@ mod tests {
         );
         let resp = server.handle_frame(raw.as_bytes()).unwrap();
         assert!(resp.contains("recovery_success"));
+    }
+
+    #[test]
+    fn recovery_is_two_phase_over_ipc() {
+        let mut server = IpcServer::new(ConstitutionService::new(RiskParameters::default()));
+
+        // Drive into EmergencyHalt via a drawdown breach.
+        let req = EvaluateProposalRequest {
+            portfolio: state(700_000.0),
+            proposal: proposal(10_000.0),
+        };
+        let raw = envelope(
+            IpcOpcode::EvaluateProposal,
+            serde_json::to_string(&req).unwrap(),
+        );
+        let resp = server.handle_frame(raw.as_bytes()).unwrap();
+        assert!(resp.contains("EmergencyLiquidationAll"));
+
+        // First valid proof: EmergencyHalt -> AutonomousRecovery.
+        let raw = envelope(
+            IpcOpcode::AttemptRecovery,
+            serde_json::to_string(&AttemptRecoveryRequest {
+                cryptographic_proof_valid: true,
+            })
+            .unwrap(),
+        );
+        let resp = server.handle_frame(raw.as_bytes()).unwrap();
+        assert!(resp.contains("\"recovery_success\":true"));
+
+        // Not yet Normal: status must report AutonomousRecovery.
+        let raw = envelope(IpcOpcode::GetStatus, "{}".to_string());
+        let resp = server.handle_frame(raw.as_bytes()).unwrap();
+        assert!(resp.contains("AutonomousRecovery"));
+
+        // Invalid proof cannot advance out of AutonomousRecovery.
+        let raw = envelope(
+            IpcOpcode::AttemptRecovery,
+            serde_json::to_string(&AttemptRecoveryRequest {
+                cryptographic_proof_valid: false,
+            })
+            .unwrap(),
+        );
+        let resp = server.handle_frame(raw.as_bytes()).unwrap();
+        assert!(resp.contains("\"recovery_success\":false"));
+        let raw = envelope(IpcOpcode::GetStatus, "{}".to_string());
+        let resp = server.handle_frame(raw.as_bytes()).unwrap();
+        assert!(resp.contains("AutonomousRecovery"));
+
+        // Second valid proof: AutonomousRecovery -> Normal.
+        let raw = envelope(
+            IpcOpcode::AttemptRecovery,
+            serde_json::to_string(&AttemptRecoveryRequest {
+                cryptographic_proof_valid: true,
+            })
+            .unwrap(),
+        );
+        let resp = server.handle_frame(raw.as_bytes()).unwrap();
+        assert!(resp.contains("\"recovery_success\":true"));
+        let raw = envelope(IpcOpcode::GetStatus, "{}".to_string());
+        let resp = server.handle_frame(raw.as_bytes()).unwrap();
+        assert!(resp.contains("Normal"));
+        assert!(resp.contains("transitions"));
+        assert!(resp.contains("state_history"));
+    }
+
+    #[test]
+    fn status_exposes_transition_history() {
+        let mut server = IpcServer::new(ConstitutionService::new(RiskParameters::default()));
+        let _ = envelope(IpcOpcode::Heartbeat, "{}".to_string());
+        let raw = envelope(IpcOpcode::GetStatus, "{}".to_string());
+        let resp = server.handle_frame(raw.as_bytes()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&resp).unwrap();
+        assert_eq!(parsed["transitions"], 0);
+        assert_eq!(parsed["state_history"], serde_json::json!([]));
     }
 }

@@ -1,5 +1,4 @@
-﻿from typing import Dict
-
+﻿
 
 class GlobalTaxRegulatoryParser:
     """
@@ -8,7 +7,7 @@ class GlobalTaxRegulatoryParser:
     """
 
     def __init__(self):
-        self.active_jurisdiction_rules: Dict[str, float] = {
+        self.active_jurisdiction_rules: dict[str, float] = {
             "GLOBAL_STANDARD": 0.15,
             "RESTRICTED_ZONE_A": 0.35,
             "TAX_HAVEN_OPTIMIZED": 0.05,

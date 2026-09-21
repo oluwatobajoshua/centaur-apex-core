@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://centaur-apex.core/schemas/order-types/v1",
+  "title": "Universal Order Intent Vocabulary",
+  "description": "Canonical vocabulary governing order intents that flow through the protocol-agnostic execution layer. Referenced by venue_contract.jsonschema and enforced by adapters/base.py. Genesis DNA (G3) — the vocabulary is a mechanism, not an instantiation.",
+  "$defs": {
+    "side": {
+      "description": "Direction of the order intent.",
+      "$comment": "Must remain in lock-step with adapters.base.Side",
+      "enum": ["Buy", "Sell"]
+    },
+    "orderType": {
+      "description": "Canonical order type vocabulary (bridge-mapped by venue plugins).",
+      "enum": ["MARKET", "LIMIT", "STOP", "STOP_LIMIT"]
+    },
+    "timeInForce": {
+      "description": "Canonical time-in-force vocabulary.",
+      "enum": ["GTC", "IOC", "FOK", "DAY"]
+    },
+    "executionStatus": {
+      "description": "Canonical execution receipt lifecycle vocabulary.",
+      "enum": ["FILLED", "PARTIAL_FILL", "REJECTED", "PENDING", "DRY_RUN"]
+    },
+    "orderIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent_id", "asset_id", "side", "quantity", "max_slippage"],
+      "properties": {
+        "intent_id": { "type": "string", "minLength": 1 },
+        "asset_id": { "type": "string", "minLength": 1 },
+        "side": { "$ref": "#/$defs/side" },
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "max_slippage": { "type": "number", "minimum": 0 },
+        "order_type": { "$ref": "#/$defs/orderType" },
+        "time_in_force": { "$ref": "#/$defs/timeInForce" }
+      }
+    },
+    "executionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent_id", "execution_id", "filled_price", "filled_quantity", "status"],
+      "properties": {
+        "intent_id": { "type": "string", "minLength": 1 },
+        "execution_id": { "type": "string", "minLength": 1 },
+        "filled_price": { "type": "number", "minimum": 0 },
+        "filled_quantity": { "type": "number", "minimum": 0 },
+        "status": { "$ref": "#/$defs/executionStatus" }
+      }
+    }
+  }
+}

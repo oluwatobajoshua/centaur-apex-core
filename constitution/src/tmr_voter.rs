@@ -13,7 +13,9 @@ pub struct TripleModularRedundancyVoter {
 
 impl Default for TripleModularRedundancyVoter {
     fn default() -> Self {
-        Self { reconcile_threshold: 2 }
+        Self {
+            reconcile_threshold: 2,
+        }
     }
 }
 
@@ -44,7 +46,10 @@ pub fn vote_on_verdicies(verdicts: &[ConstitutionVerdict; 3]) -> TMRVerdict {
     }
 }
 
-pub fn reconcile(verdicts: [ConstitutionVerdict; 3], voter: &TripleModularRedundancyVoter) -> ConstitutionVerdict {
+pub fn reconcile(
+    verdicts: [ConstitutionVerdict; 3],
+    voter: &TripleModularRedundancyVoter,
+) -> ConstitutionVerdict {
     let ballot = vote_on_verdicies(&verdicts);
 
     if ballot.unanimous {
@@ -91,7 +96,9 @@ pub fn reconcile(verdicts: [ConstitutionVerdict; 3], voter: &TripleModularRedund
                 _ => None,
             })
             .unwrap_or(RiskViolationCode::InvalidNumericalState);
-        return ConstitutionVerdict::Rejected { reason_code: reason };
+        return ConstitutionVerdict::Rejected {
+            reason_code: reason,
+        };
     }
 
     if emergency >= voter.reconcile_threshold as usize {

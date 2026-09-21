@@ -54,6 +54,7 @@ impl SecureKeyManager {
     }
 
     pub fn fail_safe_liquidation_authorized(&self) -> bool {
-        self.access_mode == KeyVaultAccess::AuthorizedSigner || self.access_mode == KeyVaultAccess::Locked
+        self.access_mode == KeyVaultAccess::AuthorizedSigner
+            || self.access_mode == KeyVaultAccess::Locked
     }
 }

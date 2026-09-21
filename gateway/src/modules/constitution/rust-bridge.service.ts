@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as net from 'net';
+import {
+  ConstitutionTransport,
+  ConstitutionStatus,
+  EvaluateResult,
+  HeartbeatResult,
+} from './constitution-transport';
 
 export interface Position {
   asset_id: string;
@@ -38,14 +44,26 @@ interface IpcEnvelope {
 const PROTOCOL_VERSION = 1;
 const MAX_FRAME_BYTES = 16_384;
 
+/** Injectable socket factory so unit tests can substitute fake sockets. */
 @Injectable()
-export class RustBridgeService {
+export class SocketFactory {
+  private impl: () => net.Socket = () => new net.Socket();
+  setImplementation(impl: () => net.Socket): void {
+    this.impl = impl;
+  }
+  create(): net.Socket {
+    return this.impl();
+  }
+}
+
+@Injectable()
+export class RustBridgeService implements ConstitutionTransport {
   private readonly logger = new Logger(RustBridgeService.name);
   private readonly host: string;
   private readonly port: number;
   private readonly timeoutMs: number;
 
-  constructor() {
+  constructor(private readonly socketFactory: SocketFactory = new SocketFactory()) {
     this.host = process.env.CONSTITUTION_HOST ?? '127.0.0.1';
     this.port = Number(process.env.CONSTITUTION_PORT ?? 15565);
     this.timeoutMs = Number(process.env.CONSTITUTION_TIMEOUT_MS ?? 5000);
@@ -55,28 +73,24 @@ export class RustBridgeService {
   async evaluateProposal(
     portfolio: PortfolioState,
     proposal: TradeProposal,
-  ): Promise<{ verdict: ConstitutionVerdict; system_state: string }> {
+  ): Promise<EvaluateResult> {
     const payload = JSON.stringify({ portfolio, proposal });
     const raw = await this.rpc('EvaluateProposal', payload);
-    return JSON.parse(raw) as { verdict: ConstitutionVerdict; system_state: string };
+    return JSON.parse(raw) as EvaluateResult;
   }
 
-  async getStatus(): Promise<{
-    system_state: string;
-    proposals_seen: number;
-    emergencies: number;
-  }> {
+  async getStatus(): Promise<ConstitutionStatus> {
     const raw = await this.rpc('GetStatus', '{}');
-    return JSON.parse(raw) as {
-      system_state: string;
-      proposals_seen: number;
-      emergencies: number;
-    };
+    return JSON.parse(raw) as ConstitutionStatus;
   }
 
-  async heartbeat(): Promise<{ alive: boolean; protocol_version: number }> {
+  async heartbeat(): Promise<HeartbeatResult> {
     const raw = await this.rpc('Heartbeat', '{}');
-    return JSON.parse(raw) as { alive: boolean; protocol_version: number };
+    const parsed = JSON.parse(raw) as HeartbeatResult;
+    if (!parsed.alive) {
+      throw new Error('constitution daemon reported not alive');
+    }
+    return parsed;
   }
 
   /** Length-prefixed TCP framing exchange with the Rust daemon. */
@@ -95,7 +109,7 @@ export class RustBridgeService {
         return;
       }
 
-      const socket = new net.Socket();
+      const socket = this.socketFactory.create();
       const timer = setTimeout(() => {
         socket.destroy();
         reject(new Error('constitutiond RPC timed out'));
@@ -118,10 +132,8 @@ export class RustBridgeService {
 
       socket.on('data', (data: Buffer) => {
         chunks.push(data);
-        if (responseLength === null && chunks[0] && chunks[0].length >= 4) {
-          responseLength = chunks.reduce((a, c) => a + c.length, 0) >= 4
-            ? chunks[0].readUInt32BE(0)
-            : null;
+        if (responseLength === null && chunks.reduce((a, c) => a + c.length, 0) >= 4) {
+          responseLength = chunks[0].readUInt32BE(0);
         }
         const total = chunks.reduce((a, c) => a + c.length, 0);
         if (responseLength !== null && total >= responseLength + 4) {

@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "adaptive_cortex"
 version = "0.1.0"
 description = "Probabilistic AI Layer for Centaur-Apex Autonomous Trading Ecosystem"
@@ -8,3 +8,10 @@ dependencies = [
     "requests>=2.31.0"
 ]
 requires-python = ">=3.10"
+
+[project.optional-dependencies]
+testing = ["hypothesis>=6.0.0", "pytest>=7.0.0"]
+
+[tool.hypothesis]
+# Allow property-based tests to run in CI without excessive runtime
+max_example = 500

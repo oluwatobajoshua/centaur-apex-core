@@ -14,6 +14,7 @@ class EvolutionaryCodeAgent:
 
     def stage_patch(self, file_path: str, proposed_content: str, reason: str) -> str:
         patch_id = hashlib.sha256(proposed_content.encode("utf-8")).hexdigest()[:12]
+        self.patches_dir.mkdir(parents=True, exist_ok=True)
         patch_filename = self.patches_dir / f"patch_{patch_id}.diff"
 
         metadata = f"# REASON: {reason}\n# TARGET: {file_path}\n\n"

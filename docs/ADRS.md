@@ -50,7 +50,10 @@ one TCP connection and reusing it for the full evaluation lifecycle).
   engineering debt to be retired by the Evolution Sub-Agent, not something
   we hand-optimize now.
 
-**Status:** Accepted as temporary (documented in `docs/PRD.md` §7).
+**Status:** **SUPERSEDED** by TRACKER Phase 10.1 (2026-09-14): `constitutiond` now hosts a
+single kernel in `Arc<Mutex<IpcServer>>` shared across all TCP connections (per-frame lock,
+constant lifetime memory via the bounded transition journal). The long-lived-actor direction
+remains for the Evolution Sub-Agent; the persistent kernel is the interim production shape.
 
 ---
 

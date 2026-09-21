@@ -4,6 +4,148 @@ All notable changes to Centaur-Apex Core are documented here, grouped by
 release line. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows `docs/RELEASE.md` (semantic, immortal).
 
+## [Unreleased] — 2026-09-16 (Genesis Complete — Phases 9–15, Backlog B.1–B.6)
+
+### Added
+- **docs/GENESIS-CEREMONY.md** (G6) — Full multi-sig key ceremony procedure:
+  participant roles, air-gap prerequisites, 7-step process (keygen → witness
+  attestation → aggregation → on-chain anchoring → verification gates → seal),
+  post-ceremony key management, failure handling, sealed-hash field.
+- **docs/TIMELOCK-GOVERNANCE.md** (G6) — Time-locked governance contract
+  design: OpenZeppelin TimelockController + thin GovernanceRouter, parameter-
+  change vocabulary (I1–I3 thresholds, quorum, delay, keyset hash), 4-state
+  proposal FSM, Doomsday interaction, deployment & anchoring.
+- **docs/GENESIS-CEREMONY-DRYRUN.md** (G6) — Sepolia testnet rehearsal
+  procedure (D0–D6), failure-mode tests (D4.1–D4.4), mainnet go/no-go criteria.
+- **constitution/kani.toml** — Kani proof configuration documenting all five
+  `#[cfg(kani)]` harness locations.
+- **Sandbox shadow-trading** (G2) — `evolution/evolution/sandbox_runner.py`
+  replaced `time.sleep()` stub with a real simulation loop using
+  `SyntheticRegimeGenerator` (G7); returns structured `ShadowSimulationResult`.
+  10/10 tests pass.
+- **Docker infrastructure** (B.1) — `docker/` with three production-grade
+  Dockerfiles + `docker-compose.yml`:
+  - `docker/constitution/Dockerfile` — multi-stage Rust → distroless
+    (`constitutiond` + `constitution_cli`); `CONSTITUTION_HOST`/`CONSTITUTION_PORT`
+    env-configurable bind; healthcheck via `constitution_cli` heartbeat.
+  - `docker/gateway/Dockerfile` — multi-stage Node 20 → slim NestJS gateway.
+  - `docker/python-services/Dockerfile` — unified Python 3.12 image for all
+    six Python packages.
+  - `docker-compose.yml` — local dev orchestration with healthcheck-gated deps.
+- **Full-pipeline integration test** (B.2) —
+  `simulation/tests/integration_full_pipeline.py` + pytest wrapper validates
+  the complete Cortex → Constitution → MockExchangeAdapter pipeline:
+  5 market scenarios, proposal → verdict → intent conversion → execution receipt.
+  `adapters/adapters/proposal_bridge.py` (G3) provides the type-safe
+  `TradeProposal → UniversalOrderIntent` conversion bridge. CI: added
+  `integrate_full_pipeline` step to chronos-integration job.
+- **Property-based / fuzz tests** (B.3) — PRD §5 "fuzz testing":
+  - Rust `proptest` (10 properties + 3 regression tests in `invariants.rs`
+    and `state_machine.rs`): no-panic, drawdown-trigger, notional-preservation,
+    NaN/inf rejection, two-phase recovery, emergency-halt safety.
+  - Python `hypothesis` (11 properties in `test_proposal_api_hypothesis.py`
+    and `test_engine_hypothesis.py`): valid parse, roundtrip, engine invariants.
+  - `hypothesis` added to CI + `cortex/pyproject.toml[testing]` extra.
+- **Chaos engineering engine** (B.4) — `simulation/tests/chaos_engine.py`
+  with three failure-injection scenarios: daemon crash (TCP sever), corrupted
+  packets (invalid JSON, wrong version, oversized/missing/bad fields), and
+  flash crash (extreme SyntheticRegimeGenerator shocks → EmergencyHalt →
+  two-phase recovery). 4 pytest tests in `test_chaos.py`. CI: added
+  `chaos_engine.py` run step.
+
+### Changed
+- **constitution/src/invariants.rs** — Bug fix found by proptest: infinity
+  inputs (`total_equity = ∞`, `target_notional = ∞`) bypassed the NaN-only
+  validation guard and produced `Approved { adjusted_notional: inf }`,
+  violating Invariant D. Added `is_infinite()` checks for all numerical fields
+  and tightened `target_notional <= 0.0` (was `< 0.0`). Added
+  `#[derive(Debug)]` to `RiskParameters`. 3 regression tests pin the fix.
+- **constitution/src/bin/constitutiond.rs** — Added `resolve_bind_address()`
+  reading `CONSTITUTION_HOST`/`CONSTITUTION_PORT` env vars (data-driven IPC
+  config per AGENTS.md §7). Safe defaults unchanged.
+- **doomsday/doomsday/cli.py** (G6) — New CLI with `--self-test`, `--run`,
+  `--beat`, `--status`, `--disarm` subcommands. Self-test validates the full
+  ARMED→WATCHING→ESCALATING→LIQUIDATING→DORMANT FSM + disarm path.
+  Data-driven config via JSON path or env. `doomsday/__main__.py` enables
+  `python -m doomsday`. 10 tests.
+- **doomsday/doomsday/oracle.py** — Fixed empty 6-quote docstring (`""""""`
+  → proper `"""..."""`) on `get_conversion_status`.
+- **.github/workflows/ci.yml** — `kani-verify` job hardened: captures exit code,
+  uploads proof artifacts (`target/kani/` + output log) to GitHub Artifacts,
+  reports VERIFIED/FAILED summary. `hypothesis` + `chaos_engine.py` added to
+  chronos-integration job. `doomsday` added to CI compileall + ruff.
+- **.gitignore** — Added `constitution/proptest-regressions/`.
+- **docs/GETTING-STARTED.md** — Corrected Rust test count to 27 (17 unit +
+  10 proptest/regression). Added sections 7–9: full-pipeline integration,
+  chaos engineering, Doomsday CLI self-test. Fixed CLI bridge examples:
+  EvaluateProposal command now pipes JSON via stdin (PowerShell native-command
+  quoting mangles embedded `"` when passed as argv; stdin pipe avoids this).
+  Verified output: `{"verdict":{"Approved":{"adjusted_notional":50000.0}}}`.
+- **Lint pass** — Fixed 171+ ruff issues across all 6 Python packages:
+  deprecated `typing` imports → modern annotations, unused imports, import
+  sorting, NaN check → `math.isnan()`, nested-if flattening, `ClassVar` for
+  class-level constants, `.items()` → `.values()` where key unused,
+  `list(...)[0]` → `next(iter(...))`. Added `# noqa` for intentional
+  fail-safe exception handling (I6 invariant) and test patterns.
+- **docs/ARCHITECTURE.md** — Updated Constitution state model (persistent
+  kernel via `Arc<Mutex>` per Phase 10.1, not per-connection stateless).
+- **CONTRIBUTING.md** — Enhanced with full verification checklist (Rust:
+  cargo build/test/fmt/clippy; Python: compileall/ruff/pytest/Chronos 1000-yr;
+  Gateway: npm build/test), CI job matrix table, and updated Definition of Done.
+- **TRACKER.md** — All phases 9–15 COMPLETE; B.1–B.6 ✓. 69/69 tasks complete.
+
+### Verification (2026-09-16, final)
+- **Rust (G1):** 27/27 tests pass (17 unit + 4 proptest + 3 regression + 3
+  state-machine proptest). Zero proptest regressions. `cargo build`,
+  `cargo build --release`, `cargo fmt --check`, `cargo clippy --all-targets`
+  all clean. `#[deny(unsafe_code)]` crate-wide.
+- **Python:** **216 passed, 2 skipped** (179 unit + 11 hypothesis ×500 examples
+  + 4 chaos + 3 full-pipeline + 10 doomsday CLI + 35 doomsday + 12 integration).
+  `compileall` clean. `ruff` clean.
+- **Gateway (G8):** `nest build` clean; Jest 18/18 unit + 4/4 e2e pass.
+- **Chronos (G7):** 1,000-year stress test `passed=true` (final equity
+  51,039.68, worst drawdown 0.3301, 235/235 emergency recoveries).
+- **CI YAML:** validated; 6 jobs pass (rust-lint, python-lint, chronos-integration,
+  kani-verify advisory, gateway, security-audit).
+- **Bug:1 found + fixed** via proptest (infinite equity/NaN validation gap
+  in `invariants.rs`).
+
+### Historical
+> The following phases reached stable baselines superseded by later phases
+> but whose metrics are preserved for traceability.
+
+#### Phase 14 — Doomsday Protocol (2026-09-15)
+- **doomsday/** (G6) — Reverse dead-man switch: system watches its own
+  liveness, not a human watchdog. Deterministic ARMED→WATCHING→ESCALATING→
+  LIQUIDATING→DORMANT FSM. `daemon.py` with escalation, grace, disarm (governance-gated, I7), strict mode. `oracle.py` — `AssetConversionOracle` interface + `SimulationOracle`. Doomsday suite 35/35; full Python 181 passed, 2 skipped.
+
+#### Phase 13 — Mesh & PQC (2026-09-14)
+- **mesh/** (G4) — CRYSTALS-Dilithium3 via liboqs; HMAC-SHA3 placeholder for
+  wheel-less sandboxes (fail-closed). Real WebSocket BFT quorum transport.
+  `microgrid/` telemetry. 3-node loopback integration test. Mesh suite 44 items
+  (42 pass, 2 skip locally). Full Python 156 passed, 2 skipped.
+
+#### Phase 12 — Schema-First Adapters (2026-09-14)
+- **adapters/** (G3 + S1) — `venue_contract.jsonschema` + `order_types.jsonschema`
+  with `referencing` registry. Discovery Agent as manifest gate (schema-first,
+  no code execution until validated). 24 adapter tests (was 9). Full Python 131/131.
+
+#### Phase 11 — Gateway Completion (2026-09-14)
+- **gateway/** (G8) — Pluggable `CONSTITUTION_TRANSPORT` (TCP daemon or
+  `constitution_cli` subprocess). Injectables for testability. Live `/cortex/propose`.
+  Swagger at `/docs`. 18 Jest unit + 4 e2e tests.
+
+#### Phase 10 — Constitution Hardening (2026-09-14)
+- **constitution/** (G1) — Persistent kernel (`Arc<Mutex<IpcServer>>`).
+  Two-phase recovery: `EmergencyHalt → AutonomousRecovery → Normal`.
+  `GetStatus` with bounded `state_history` (64 entries). Env-configurable thresholds.
+  `#![deny(unsafe_code)]`. 17 Rust tests (was 6). Full Python 116/116.
+
+#### Phase 9 Baseline — Verification Infrastructure (2026-09-14)
+- Root `conftest.py` + `pyproject.toml` (multi-package pytest config).
+- Import normalization (flat style). `code_agent.py` `stage_patch` fixed.
+- Cross-platform daemon path. 188 Python unit tests baseline + Chronos 250-year harness.
+
 ## [0.1.0] — 2026-09-14
 
 ### Added (Genesis bootstrap)

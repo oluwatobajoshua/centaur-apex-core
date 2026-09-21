@@ -53,10 +53,27 @@ python simulation/tests/integration_chronos.py
 ```
 
 Output should end with:
+```json
+{
+  "passed": true,
+  "final_equity": 237028.8,
+  ...
+}
 ```
-[SUCCESS] CHRONOS × CORTEX × CONSTITUTION integration passed.
-  passed=True ... final_equity=237028.80
+
+### Start the NestJS gateway
+
+```powershell
+npm install --prefix gateway
+npm run build --prefix gateway
+$env:CONSTITUTION_BRIDGE = "tcp"   # or "cli" for constitution_cli transport
+npm run start --prefix gateway
 ```
+
+- REST: `GET /constitution/status`, `POST /constitution/evaluate`,
+  `GET /cortex/propose?price=...&equity=...`
+- OpenAPI docs: `http://localhost:3000/docs` (also `/docs-json`)
+- Tests: `npm run test:unit` / `npm run test:e2e` (from `gateway/`)
 
 ---
 
@@ -104,18 +121,21 @@ client.status()  # Returns {"system_state": "Normal", "proposals_seen": ..., "em
 
 1. Verify the market event that caused the breach is genuinely over.
 2. Generate a cryptographic proof-of-legitimacy (process TBD during Genesis Ceremony).
-3. Send `AttemptRecovery` with `cryptographic_proof_valid: true`.
-4. If recovery fails, do not retry with `cryptographic_proof_valid: false`.
-   The system will stay halted — this is the correct zero-human-override
-   behavior (I7).
+3. Send `AttemptRecovery` with `cryptographic_proof_valid: true` — this moves
+   `EmergencyHalt → AutonomousRecovery` (phase 1 of 2).
+4. After the diagnostic pass in `AutonomousRecovery`, send a **second** valid
+   `AttemptRecovery` to reach `Normal` (phase 2 of 2).
+5. Invalid proofs never advance the FSM — the system stays halted. Do not retry
+   with `cryptographic_proof_valid: false`; staying halted is the correct
+   zero-human-override behavior (I7).
 
 ### constitutiond process not responding
 
 1. Kill the orphaned process: find the PID via `Get-Process constitutiond`
    and `Stop-Process -Id <pid>`.
 2. Re-launch: `cargo run --release --manifest-path constitution/Cargo.toml --bin constitutiond`.
-3. Client connections must be re-established (state not persisted across
-   connections — see ADR-002).
+3. The kernel is now persistent across connections for the daemon's lifetime
+   (Phase 10.1); only a daemon restart resets it.
 
 ### Port 15565 already in use
 

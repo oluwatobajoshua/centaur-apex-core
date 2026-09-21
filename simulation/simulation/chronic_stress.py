@@ -1,5 +1,4 @@
-﻿import sys
-import time
+﻿import time
 
 from simulation.synthetic_gen import SyntheticRegimeGenerator
 
@@ -24,7 +23,7 @@ class ChronosStressHarness:
         start = time.perf_counter()
 
         for year in range(self.simulated_years):
-            prices, curve = self.generator.generate_price_path(
+            _prices, curve = self.generator.generate_price_path(
                 start_price=100.0,
                 points=365,
                 volatility=0.02,

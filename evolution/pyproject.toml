@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "evolutionary_sub_agent"
 version = "0.1.0"
 description = "Self-refactoring and formal verification pipeline for Centaur-Apex"

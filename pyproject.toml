@@ -1,0 +1,3 @@
+[tool.pytest.ini_options]
+testpaths = ["cortex/tests", "adapters/tests", "evolution/tests", "mesh/tests", "compliance/tests", "simulation/tests", "doomsday/tests"]
+addopts = "-q"

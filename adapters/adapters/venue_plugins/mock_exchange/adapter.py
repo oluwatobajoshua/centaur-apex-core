@@ -1,7 +1,7 @@
-﻿# SYSTEM-OWNED STUB (S1): Reference venue connector. Per AGENTS.md §3, venue
+# SYSTEM-OWNED STUB (S1): Reference venue connector. Per AGENTS.md §3, venue
 # connectors are artifacts the system writes. This mock exists only to exercise
-# the abstract execution interface in tests/sandbox; not a permanent asset.
-from adapters.adapters.base import (
+# the universal execution interface in tests/sandbox; not a permanent asset.
+from adapters.base import (
     AbstractExchangeAdapter,
     ExecutionReceipt,
     UniversalOrderIntent,

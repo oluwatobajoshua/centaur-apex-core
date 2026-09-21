@@ -72,7 +72,8 @@ $env:PYTHONPATH = "cortex"; python simulation/tests/integration_chronos.py
 ## MT5 adapter dry-run / `MetaTrader5` import fails
 
 The `MetaTrader5` Python package is absent in CI/sandbox. This is expected;
-`mt5_adapter.py` degrades to `DRY_RUN` receipts. Install with:
+the `mt5_adapter` plugin (`venue_plugins/mt5_adapter/adapter.py`) degrades to
+`DRY_RUN` receipts. Install with:
 ```powershell
 pip install MetaTrader5
 ```

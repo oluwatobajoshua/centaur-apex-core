@@ -1,0 +1,64 @@
+# ==============================================================================
+# Centaur-Apex Core — Docker Compose for local development
+# Brings up all services with network isolation. The Constitution (G1) has
+# exclusive signing authority; no other container may route or sign an order.
+# ==============================================================================
+services:
+  constitution:
+    build:
+      context: .
+      dockerfile: docker/constitution/Dockerfile
+    container_name: centaur-constitutiond
+    ports:
+      - "15565:15565"
+    environment:
+      CONSTITUTION_HOST: "0.0.0.0"
+      CONSTITUTION_PORT: "15565"
+      CONSTITUTION_MAX_DRAWDOWN: "0.15"
+      CONSTITUTION_MAX_LEVERAGE: "2.5"
+      CONSTITUTION_MAX_CONCENTRATION: "0.20"
+    healthcheck:
+      test: ["CMD", "echo", "{\"protocol_version\":1,\"request_id\":\"hc\",\"opcode\":\"Heartbeat\",\"payload\":\"{}\"}" , "|", "constitution_cli"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/gateway/Dockerfile
+    container_name: centaur-gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      constitution:
+        condition: service_healthy
+    environment:
+      CONSTITUTION_TRANSPORT: "tcp"
+      CONSTITUTION_HOST: "constitution"
+      CONSTITUTION_PORT: "15565"
+      PORT: "3000"
+    restart: unless-stopped
+
+  cortex:
+    build:
+      context: .
+      dockerfile: docker/python-services/Dockerfile
+    container_name: centaur-cortex
+    depends_on:
+      constitution:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: "/app/cortex:/app/adapters:/app/evolution:/app/mesh:/app/compliance:/app/simulation:/app/doomsday:/app"
+    # Default entrypoint runs run_pipeline.py (E2E Cortex → Constitution)
+    # Override to run other modules, e.g.:
+    #   command: ["python", "cortex/cortex/engine.py", "--help"]
+    restart: unless-stopped
+
+networks:
+  default:
+    name: centaur-apex-net
+    driver: bridge

@@ -1,5 +1,5 @@
 ﻿import random
-from typing import List, Tuple
+from typing import ClassVar
 
 
 class SyntheticRegimeGenerator:
@@ -8,7 +8,7 @@ class SyntheticRegimeGenerator:
     sudden liquidity evaporation, quantum-era market structures, flash crashes.
     """
 
-    REGIMES = [
+    REGIMES: ClassVar[list[str]] = [
         "NORMAL",
         "FLASH_CRASH",
         "HYPERINFLATION_LOOP",
@@ -28,7 +28,7 @@ class SyntheticRegimeGenerator:
         start_price: float,
         points: int = 10_000,
         volatility: float = 0.02,
-    ) -> Tuple[List[float], List[float]]:
+    ) -> tuple[list[float], list[float]]:
         prices = []
         equity_curve = []
         price = start_price

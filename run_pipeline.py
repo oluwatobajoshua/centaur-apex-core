@@ -11,8 +11,9 @@ import subprocess  # noqa: E402
 from cortex.constitution_client import ConstitutionIPCClient  # noqa: E402
 from cortex.engine import CortexEngine  # noqa: E402
 
+DAEMON_NAME = "constitutiond.exe" if os.name == "nt" else "constitutiond"
 CONSTITUTIOND = os.path.abspath(
-    os.path.join(ROOT, os.path.normpath("constitution/target/debug/constitutiond.exe"))
+    os.path.join(ROOT, os.path.normpath(f"constitution/target/debug/{DAEMON_NAME}"))
 )
 
 

@@ -1,0 +1,6 @@
+[project]
+name = "doomsday"
+version = "0.1.0"
+description = "Doomsday Protocol — deterministic last-resort liveness responder (G6 Genesis)."
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2"]

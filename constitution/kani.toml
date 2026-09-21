@@ -1,0 +1,11 @@
+# Kani formal verification configuration for the iron_constitution crate.
+# See docs/PRD.md §5 (Formal Verification) and TRACKER Phase 9C.
+#
+# Proofs live inline in each source file under `#[cfg(kani)]` modules:
+#   - invariants.rs::verify_evaluate_proposal_no_panic
+#   - state_machine.rs::verify_process_proposal_no_panic
+#   - state_machine.rs::verify_attempt_recovery_no_panic
+#   - ipc.rs::verify_ipc_no_panic
+#   - tmr_voter.rs::verify_voter_no_panic
+#
+# Run:  kani --manifest-path constitution/Cargo.toml  (or `cargo kani` in CI)

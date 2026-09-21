@@ -3,9 +3,9 @@
 # Sub-Agent) as venues die or change APIs. This bootstrap stub exists ONLY to
 # prove the AbstractExchangeAdapter contract and run integration tests. It is
 # replaceable, hot-swappable, and not a permanent 100-year asset.
-from typing import Any, Dict, Optional
+from typing import Any
 
-from adapters.adapters.base import (
+from adapters.base import (
     AbstractExchangeAdapter,
     ExecutionReceipt,
     UniversalOrderIntent,
@@ -22,9 +22,9 @@ class MT5VenueAdapter(AbstractExchangeAdapter):
 
     def __init__(
         self,
-        login: Optional[int] = None,
-        password: Optional[str] = None,
-        server: Optional[str] = None,
+        login: int | None = None,
+        password: str | None = None,
+        server: str | None = None,
     ):
         self.login = login
         self.password = password
@@ -39,15 +39,16 @@ class MT5VenueAdapter(AbstractExchangeAdapter):
         if not mt5.initialize():
             print(f"MT5 initialization failed, error code = {mt5.last_error()}")
             return False
-        if self.login and self.password and self.server:
-            if not mt5.login(self.login, password=self.password, server=self.server):
+        if self.login and self.password and self.server and not mt5.login(
+            self.login, password=self.password, server=self.server
+        ):
                 print(f"Failed to connect to account #{self.login}, error = {mt5.last_error()}")
                 mt5.shutdown()
                 return False
         self.is_connected = True
         return True
 
-    def get_account_state(self) -> Dict[str, Any]:
+    def get_account_state(self) -> dict[str, Any]:
         if not self.is_connected:
             raise ConnectionError("MT5 Adapter is not connected.")
         if mt5 is None:
@@ -62,7 +63,7 @@ class MT5VenueAdapter(AbstractExchangeAdapter):
             "leverage": acc_info.leverage,
         }
 
-    def get_live_tick(self, symbol: str) -> Dict[str, Any]:
+    def get_live_tick(self, symbol: str) -> dict[str, Any]:
         if mt5 is None:
             return {"symbol": symbol, "bid": 0.0, "ask": 0.0, "time": 0}
         tick = mt5.symbol_info_tick(symbol)
