@@ -13,11 +13,19 @@ import json
 import time
 from typing import Any
 
+from adapters.base import AbstractExchangeAdapter, UniversalOrderIntent
+from adapters.proposal_bridge import verdict_to_order_action
 from doomsday.config import DeadManConfig, EscalationStep, StepType
 from doomsday.daemon import DeadManSwitchDaemon
 
 from cortex.constitution_client import ConstitutionIPCClient
 from cortex.engine import CortexEngine
+from cortex.proposal_api import TradeProposal
+
+
+def proposal_dict_to_trade_proposal(proposal: dict[str, Any]) -> TradeProposal:
+    """Convert a dict (from TradeProposal.model_dump()) back to a typed proposal."""
+    return TradeProposal(**{k: v for k, v in proposal.items() if k in TradeProposal.model_fields})
 
 
 def _default_doomsday_config(heartbeat_interval_s: float = 5.0) -> DeadManConfig:
@@ -57,6 +65,7 @@ class TradingDaemon:
         equity: float = 100_000.0,
         heartbeat_interval_s: float = 5.0,
         tick_interval_s: float = 60.0,
+        exchange_adapter: AbstractExchangeAdapter | None = None,
     ):
         self.asset_id = asset_id
         self.client = ConstitutionIPCClient(
@@ -67,6 +76,7 @@ class TradingDaemon:
         self.engine = CortexEngine(asset_id=asset_id)
         self.heartbeat_interval_s = heartbeat_interval_s
         self.tick_interval_s = tick_interval_s
+        self.adapter = exchange_adapter
         self.portfolio = {
             "timestamp": int(time.time()),
             "total_equity": equity,
@@ -105,24 +115,55 @@ class TradingDaemon:
         self._dormant.beat()
 
     def _handle_verdict(self, verdict: dict, proposal: dict[str, Any]) -> None:
-        """Act on Constitution verdict: update portfolio for Approved, log for Rejected."""
+        """Act on Constitution verdict: route approved orders through the adapter,
+        update portfolio, log rejected/emergency."""
         if "Approved" in verdict:
             approved = verdict["Approved"]
             notional = approved.get("adjusted_notional", 0.0)
-            self.portfolio["open_positions"].append(
-                {
-                    "asset_id": proposal["asset_id"],
-                    "notional_value": notional,
-                    "entry_price": proposal.get("target_notional", 0.0) / max(notional, 1.0),
-                }
-            )
             print(f"[TradingDaemon] Approved — notional={notional}", flush=True)
+
+            # G3: Bridge approved proposal → UniversalOrderIntent → adapter execution
+            # I5: only the Constitution's verdict (above) authorises an order;
+            # the adapter merely executes the routed intent.
+            if self.adapter and self.adapter.health_check():
+                intent = verdict_to_order_action(
+                    verdict,
+                    proposal_dict_to_trade_proposal(proposal),
+                    proposal.get("_reference_price", 0.0),
+                )
+                if intent:
+                    receipt = self.adapter.execute_order(intent)
+                    print(f"[TradingDaemon] Executed — {receipt.status} @ {receipt.filled_price}", flush=True)
+                    self._apply_execution(receipt, intent, notional)
+            else:
+                # Dry-run: update portfolio in-memory without adapter execution
+                self._apply_approved_proposal(proposal, notional)
         elif "EmergencyLiquidationAll" in verdict:
             print("[TradingDaemon] EMERGENCY LIQUIDATION — Halt all trading", flush=True)
-            self._dormant.disarm("")  # governance_key would be required in prod
+            self._dormant.disarm("")
         else:
             print(f"[TradingDaemon] Rejected — {verdict}", flush=True)
 
+    def _apply_execution(self, receipt: Any, intent: UniversalOrderIntent, notional: float) -> None:
+        """Update portfolio with actual execution results from the adapter."""
+        if receipt.status == "FILLED":
+            self.portfolio["open_positions"].append({
+                "asset_id": intent.asset_id,
+                "notional_value": notional,
+                "entry_price": receipt.filled_price,
+                "quantity": receipt.filled_quantity,
+            })
+        elif receipt.status == "DRY_RUN":
+            # Fallback for dry-run adapters
+            self._apply_approved_proposal({"asset_id": intent.asset_id, "target_notional": notional}, notional)
+
+    def _apply_approved_proposal(self, proposal: dict, notional: float) -> None:
+        """Update portfolio in-memory for approved proposals (dry-run mode)."""
+        self.portfolio["open_positions"].append({
+            "asset_id": proposal.get("asset_id", ""),
+            "notional_value": notional,
+            "entry_price": proposal.get("target_notional", 0.0) / max(notional, 1.0),
+        })
     def _update_health(self) -> bool:
         """Check Constitution daemon health via Heartbeat."""
         try:

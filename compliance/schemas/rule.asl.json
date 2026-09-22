@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://centaur-apex.core/schemas/compliance/rule/v1",
+  "title": "Rules-as-Code Compliance Rule",
+  "description": "Data-driven compliance rule schema governing jurisdictional restrictions, asset eligibility, and risk thresholds. Genesis G6 — rules-as-code parsers consume this schema; new jurisdictions and restrictions are data-driven, not hand-coded logic.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["rule_id", "jurisdiction", "rule_type", "condition", "action"],
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_\\-]*$"
+    },
+    "jurisdiction": {
+      "description": "ISO 3166-1 alpha-3 jurisdiction code or 'GLOBAL'.",
+      "type": "string",
+      "pattern": "^(GLOBAL|[A-Z]{3})$"
+    },
+    "rule_type": {
+      "description": "Category of compliance rule.",
+      "enum": ["ASSET_RESTRICTION", "POSITION_LIMIT", "LEVERAGE_CAP", "TAX_RATE", "TRANSFER_BAN", "REPORTING_THRESHOLD"]
+    },
+    "condition": {
+      "description": "Declarative condition that triggers the rule.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "operator", "value"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The portfolio/proposal field to evaluate against."
+        },
+        "operator": {
+          "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in", "regex"]
+        },
+        "value": {
+          "description": "Comparison value or, for 'in'/'not_in', an array of allowed/blocked values.",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            {
+              "type": "array",
+              "items": { "type": ["string", "number"] }
+            }
+          ]
+        }
+      }
+    },
+    "action": {
+      "description": "Enforcement action when the condition is met.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["REJECT", "REDIRECT", "REDUCE_TO", "NOTIFY", "SEAL"]
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Rule-type-specific parameters (e.g. redirect target, reduction percentage).",
+          "additionalProperties": true
+        }
+      }
+    },
+    "effective_from": {
+      "description": "ISO-8601 timestamp when the rule becomes active.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "effective_until": {
+      "description": "ISO-8601 timestamp when the rule expires. Omit for permanent rules.",
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "severity": {
+      "enum": ["INFO", "WARNING", "BLOCK"],
+      "default": "BLOCK"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

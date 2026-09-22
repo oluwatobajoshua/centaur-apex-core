@@ -1,6 +1,6 @@
 # TRACKER.md — Implementation Tracker
 
-**Last updated:** 2026-09-16
+**Last updated:** 2026-09-22
 **Source of truth:** Audit findings + PRD debt register + AGENTS.md mandates
 
 ---
@@ -334,6 +334,88 @@ Every module has an empty `tests/` directory. Fill them.
 
 > **Chronos 1,000-year result (2026-09-14):** `passed=true`, final equity 51,039.68, worst drawdown 0.3301, 321,111 approved / 42,654 rejected, 235 emergency liquidations all recovered, 0 equity exhaustion. CLI: `python simulation/tests/integration_chronos.py 1000`.
 
+---
+
+## Post-Ceremony Genesis DNA Completion (2026-09-21)
+
+> Gap analysis against AGENTS.md §2 (G1-G9 Genesis DNA) revealed three missing artifacts and one bug fix required before the system can fully own S1-S7 generation.
+
+| # | Task | Genesis Component | Done |
+|---|------|-------------------|------|
+| GC.1 | Create `cortex/schemas/strategy.proto` — protobuf schema for TradeProposal / ProposalBatch / StrategySchema | G5 (Adaptive Cortex frameworks) | [x] |
+| GC.2 | Create `compliance/schemas/rule.asl.json` — JSON-Schema for data-driven compliance rules (jurisdiction, condition, action) | G6 (Governance & Compliance foundations) | [x] |
+| GC.3 | Fix `cortex/cortex/trading_daemon.py` — remove duplicate `adapters.base`/`verdict_to_order_action` imports; add missing `UniversalOrderIntent` import used by `_apply_execution` | G8 (Gateway/orchestration skeleton) | [x] |
+| GC.4 | Fix `cortex/tests/test_engine_hypothesis.py` — suppress Hypothesis `too_slow` health check on all `@settings` decorators (input generation overrides fields post-draw) | 9B.* | [x] |
+| GC.5 | Fix `run_pipeline.py` — remove unused `# noqa: E402` directives (E402 not enabled in project ruff config); inline `import time` in except branch | G9 (Build tooling) | [x] |
+| GC.6 | Fix `evolution/evolution/code_agent.py` — sort imports (I001); annotate S112 try-except-continue with noqa (log-recursion risk) | G2 (Self-Evolution Framework) | [x] |
+
+### Verification
+
+| Check | Status |
+|-------|--------|
+| `python -m py_compile cortex/cortex/trading_daemon.py` | ✓ |
+| `python -m py_compile run_pipeline.py` | ✓ |
+| `python -m py_compile evolution/evolution/code_agent.py` | ✓ |
+| `python -m pytest cortex/tests/ adapters/tests/ doomsday/tests/ -q` | 119 passed |
+| `python -m pytest` (full suite) | 216 passed, 2 skipped |
+| `python -m ruff check . --exclude gateway --exclude node_modules` | All checks passed! |
+| `cargo build --release` (constitution) | Previously verified clean (2026-09-14) |
+| `cargo test` (constitution) | Previously verified 27/27 (2026-09-14) |
+| `cargo kani` proofs (5 harnesses) | Previously verified (2026-09-14) |
+| `json.load(compliance/schemas/rule.asl.json)` | Valid |
+| `json.load(adapters/schemas/*.jsonschema)` | Valid |
+
+## Phase 16: Autonomy Nucleus — the hand-written foundation still required before the system can take over (BACKLOG — 0/13 done)
+
+> Honest gap (2026-09-22): the running stack is the live Genesis *gate* (G1 session),
+> but the self-evolution engine is **scaffolding, not alive** — nothing in
+> `evolution/` yet *writes* a real component from a specification; it only stages
+> diffs (`stage_patch`) and proposes naive fixes (no writer driver, no closed
+> verify→adopt loop). Until that lynchpin exists, "the system writes its own
+> code" is aspirational. These 13 items are the real remaining foundation —
+> each is a **mechanism** (Genesis DNA), never a hand-written instantiation.
+> Per AGENTS.md §3, S1–S7 artifacts themselves remain system-written.
+
+### A. Self-Evolution Engine (G2) — THE lynchpin
+
+| # | Task | What exists today | Done |
+|---|------|-------------------|------|
+| AT.1 | Spec→candidate-code **writer driver** — consume a declared specification (schema/ASL) and emit candidate source; runs on a cadence. | `EvolutionaryCodeAgent.propose_fix` is a naive single-diff stub; orchestrator `_run_evolution` is a placeholder (`[Evolution] hourly self-assessment cycle`). | [ ] |
+| AT.2 | **Closed verify→adopt loop** — candidate → shadow sandbox (`sandbox_runner`) → lint/tests → diff → apply-or-rollback with provenance, wired into the orchestrator loop (today `_scan_and_heal` SKIPs everything). | `sandbox_runner` ShadowSimulation + `ci_prover` exist but are not connected end-to-end to any writer. | [ ] |
+| AT.3 | **Generated-artifact quarantine + adoption gate** — a reviewed registry with test evidence before generated code is trusted (anti drift / self-healing-lockup guard). | Patches land blindly in `evolution/patches/`; no adoption review gate. | [ ] |
+
+### B. S1 venue acquisition — "the system's first job" (user-visible)
+
+| # | Task | What exists today | Done |
+|---|------|-------------------|------|
+| S1.1 | **Venue spec-first generator** — from `venue_contract.jsonschema` conformance emit a candidate `adapter.py` + `manifest.json` for a declared endpoint. | `discovery_agent.py` validates + loads plugins (schema-first, sandbox-before-еxecution) = **validation half only**; no generator exists. `mock_exchange/` + `mt5_adapter/` are hand-scaffolded exemplars, not produced. | [ ] |
+| S1.2 | **Demo-venue sandbox certification** — dry-run/paper harness proving `connect`/`health_check`/`execute_order(DRY_RUN)` against a demo endpoint (e.g. Binance Spot Testnet public market data) before `DiscoveryAgent` may adopt it. | None (Chaos/simulation sandboxes exist for strategies, not venue plugins). | [ ] |
+| S1.3 | **System-produced demo plugin** — run the generator (S1.1 → S1.2) to yield the first certified real-demo venue plugin; API keys injected via env/HSM only (zero hardcoded secrets). | Nothing adopted; orchestrator trading daemon currently runs dry-run (`exchange_adapter=None`). | [ ] |
+
+### C. S2 strategy acquisition (frameworks exist; the meta-learning writer does not)
+
+| # | Task | What exists today | Done |
+|---|------|-------------------|------|
+| S2.1 | Strategy proposal → candidate **generator** (Cortex meta-learning loop). | `engine.py` (evaluate tick) + `agent_marl.py` (conviction sizing) are proposal frameworks, not a learning/writer loop. | [ ] |
+| S2.2 | **Strategy certification gate** — generated strategy must pass ShadowSimulation + Chronos before it may propose (I5: it may only propose; never execute). | Gate mechanics (ShadowSimulationResult, Chronos 1000-yr) exist but are not wired to generated-strategy admission. | [ ] |
+
+### D. Production governance (documented, not executed)
+
+| # | Task | What exists today | Done |
+|---|------|-------------------|------|
+| PG.1 | Execute the Genesis Ceremony — 2-of-3 trustees, sealed root-hash set. | `docs/GENESIS-CEREMONY.md` complete; `GENESIS_CEREMONY_ROOT_HASH=""`. | [ ] |
+| PG.2 | Replace placeholder PQC + governance escrow — real Dilithium keyring; `mesh` still reports `pqc_secured: False`; `secure_keys.rs:43` threshold-only. | `pqc_wrapper` real Dilithium via liboqs; kernel-side keys are placeholder. | [ ] |
+| PG.3 | Enforce **I7** — `strict_heartbeat_signing=True`, signed Doomsday journal (`governance_key`). | Doomsday runs `strict_heartbeat_signing=False`, `governance_key=""`. | [ ] |
+| PG.4 | Deploy the time-lock governance contract. | Phase 15 design (`docs/TIMELOCK-GOVERNANCE.md`) complete; not deployed. | [ ] |
+
+### E. Observability — "watching it do its job"
+
+| # | Task | What exists today | Done |
+|---|------|-------------------|------|
+| OBS.1 | Live per-call pipeline trace (tick → proposal → verdict → execution) as an auditable surface. | `--status` is process-level; decisions are visible only in `trading-daemon.log`. | [ ] |
+
+---
+
 ## Summary
 
 | Phase | Total Items | Completed | Remaining |
@@ -346,4 +428,34 @@ Every module has an empty `tests/` directory. Fill them.
 | 14 — Doomsday | 3 | 3 | 0 |
 | 15 — Genesis Ceremony | 3 | 3 | 0 |
 | Backlog | 6 | 6 | 0 |
-| **Total** | **69** | **69** | **0** |
+| Post-Ceremony DNA Completion | 6 | 6 | 0 |
+| Live-Run Remediation | 6 | 6 | 0 |
+| Phase 16 — Autonomy Nucleus (BACKLOG) | 13 | 0 | 13 |
+| **Total** | **94** | **81** | **13** |
+
+## Live-Run Remediation (2026-09-22)
+
+> First real `python centaur_start.py` run exposed three bootstrap-tooling (G9/G8) defects in the live orchestrator.
+
+| # | Task | Fix | Done |
+|---|------|-----|------|
+| LR.1 | `centaur_start.py` health check sent **raw JSON** over TCP; IPC requires `[4-byte BE length][JSON frame]`. Result: `constitutiond` logged `invalid frame length` and dropped every connection → `FATAL: constitutiond did not become healthy`. | Rewrote `_wait_for_constitutiond` to frame the Heartbeat envelope via `struct.pack(">I", len)` + length-prefixed read (mirrors `cortex/constitution_client.py:55`). Verified live: `{"alive":true,"protocol_version":1}`. | [x] |
+| LR.2 | `── Service Status ──` box-drawing chars crashed the logging handlers on cp1252 (Windows) — `UnicodeEncodeError` in `StreamHandler.emit`. | UTF-8 reconfigure of `sys.stdout`/`sys.stderr` on startup + `encoding="utf-8"` on the `FileHandler`. | [x] |
+| LR.3 | Orphaned `constitutiond` (elevated, from an aborted pre-fix run) held port 15565 → every spawned `constitutiond` child exited(1) on bind (os error 10048) while the health check passed against the orphan. | `_adopt_existing_constitutiond()`: if a healthy daemon already answers the framed heartbeat, adopt it via `_AdoptedDaemon` (live-health `poll()`, no-op terminate) and emit a prominent warning with the offending PID — instead of crash-looping. Spawns normally when the port is free. | [x] |
+| LR.4 | All `python -c` service runners were **single-line** `;`-joined code — a compound statement (`while`/`def`) after `;` is a SyntaxError, so every service crash-looped with `SyntaxError: invalid syntax` (the root of the earlier `[generic_error]` floods). | Rewrote `_run_trading_daemon`, `_run_doomsday`, `_run_mesh_node`, `_run_evolution`, `_run_compliance` to emit **multi-line heredoc source** (`"""..."""`), no embedded Windows paths (PYTHONPATH via `os.pathsep` env). Trading daemon now uses its native contract: pipe `market_feed.py` stdout → `TradingDaemon.run_loop()` (stdin JSON), feed lifecycle paired to the daemon (`proc._feed`, `_kill_feed` in restart/stop paths). Doomsday beats **only while `_probe_constitution()` answers**; verified `EscalationState.ARMED`. | [x] |
+| LR.5 | `market_feed.py` routed its startup banner to stdout → daemon's `run_loop` tried `json.loads("[MarketFeed] …")` → `JSONDecodeError` and exit(1). | Banner → stderr; stdout is JSON-lines only. Feed cadence honored (gap < Doomsday 3×heartbeat grace → no self-escalation). | [x] |
+| LR.6 | Self-healing log scanner false-flagged **hundreds of stale/self-referential lines every cycle** (file-mtime gate only) — it re-matched its own `Log Scan:`/`[generic_error]` report lines and old error blocks → a self-feeding noise loop in `centaur.log`. | `scan_logs_for_errors`: per-line ISO-timestamp window, self-report markers excluded, `.rotated.log` archives skipped (historical, not live). Service logs rotated at boot so unstamped raw child stdout starts fresh. Live result: `Log Scan: clean (0 errors in last 5min)` on every cycle. | [x] |
+
+### Verification — full 8-service live run (2026-09-22)
+
+| Check | Status |
+|-------|--------|
+| `python -m py_compile centaur_start.py market_feed.py` + `ruff check` (both) | ✓ |
+| `constitutiond` healthy (framed probe `_probe_constitution`) | `True` |
+| All 8 services `HEALTHY` across 5+ consecutive 30s reports, stable pids | ✓ |
+| Feed → stdin → ticks → constitution verdicts (`Approved`, adjusted_notional 2.5k/5k) | ✓ |
+| Doomsday probe-beat stays `EscalationState.ARMED` (no false escalation) | ✓ |
+| Mesh nodes `HEALTHY` (+ `health_telemetry()` dict every 60s) | ✓ |
+| Kill `trading-daemon` → `[CRASHED]` → `[RESTARTED]` pid change, feed respawned, ticks resume | ✓ |
+| Log scanner: `clean (0 errors in last 5min)` every cycle (was 1400/false) | ✓ |
+| Orphaned constitution adoption (per LR.3) exercised on reboot | ✓ |

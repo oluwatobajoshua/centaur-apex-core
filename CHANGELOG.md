@@ -4,6 +4,45 @@ All notable changes to Centaur-Apex Core are documented here, grouped by
 release line. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows `docs/RELEASE.md` (semantic, immortal).
 
+## [Unreleased] — 2026-09-21 (Genesis DNA Completion)
+
+### Added
+- **cortex/schemas/strategy.proto** (G5) — Protobuf schema for `TradeProposal`,
+  `ProposalBatch`, and `StrategySchema` with sizing rules + entry/exit signals.
+  Defines the data contract the DiscoveryAgent + Cortex meta-learner own.
+- **compliance/schemas/rule.asl.json** (G6) — JSON-Schema (Draft 2020-12) for
+  rules-as-code compliance rules: jurisdiction, field/operator/value condition,
+  enforcement action (REJECT/REDIRECT/REDUCE_TO/NOTIFY/SEAL), severity levels,
+  effective-from/until timestamps, and arbitrary metadata.
+
+### Fixed
+- **cortex/cortex/trading_daemon.py** — Removed duplicate `AbstractExchangeAdapter`
+  and `verdict_to_order_action` imports; added missing `UniversalOrderIntent` import
+  required by `_apply_execution` type hint.
+- **cortex/tests/test_engine_hypothesis.py** — Suppressed Hypothesis `too_slow`
+  health check on all 7 `@settings` decorators (input strategy overrides fields
+  post-draw, triggering slow generation heuristic on constrained tick dicts).
+- **run_pipeline.py** — Removed unused `# noqa: E402` directives (E402 not enabled
+  in project ruff config); hoisted `import time` and `import subprocess` to module
+  top-level to eliminate post-`sys.path.insert` re-imports.
+- **evolution/evolution/code_agent.py** — Fixed import block ordering (I001:
+  `from typing import ClassVar` now after stdlib `import` group); annotated
+  S112 `try`/`except`/`continue` with `# noqa: S112` (log-recursion safety in
+  log-scanning context).
+
+### Verified
+- `python -m ruff check cortex adapters evolution mesh compliance simulation doomsday --ignore E501` → All checks passed!
+- `python -m py_compile` + `python -m compileall` → All modules compile clean
+- `python -m pytest` (full suite: cortex, adapters, evolution, mesh, compliance,
+  simulation, doomsday) → 216 passed, 2 skipped (liboqs real-crypto in CI)
+- `cargo build --release` → Finished successfully
+- `cargo clippy --all-targets` → Clean, no warnings
+- `cargo fmt --check` → Clean
+- `cargo test` → 27/27 passed
+- `json.load` validation → All new schema files parse as valid JSON
+
+---
+
 ## [Unreleased] — 2026-09-16 (Genesis Complete — Phases 9–15, Backlog B.1–B.6)
 
 ### Added

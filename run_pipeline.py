@@ -1,15 +1,15 @@
 import os
+import subprocess
 import sys
+import time
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "cortex"))
 sys.path.insert(0, os.path.join(ROOT, "adapters"))
 
-import subprocess  # noqa: E402
-
-from cortex.constitution_client import ConstitutionIPCClient  # noqa: E402
-from cortex.engine import CortexEngine  # noqa: E402
+from cortex.constitution_client import ConstitutionIPCClient
+from cortex.engine import CortexEngine
 
 DAEMON_NAME = "constitutiond.exe" if os.name == "nt" else "constitutiond"
 CONSTITUTIOND = os.path.abspath(
@@ -42,8 +42,6 @@ def main() -> None:
         proc = subprocess.Popen(
             [CONSTITUTIOND], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
-        import time
-
         time.sleep(1.5)
         client = ConstitutionIPCClient(timeout=2.0)
         client.open_session()

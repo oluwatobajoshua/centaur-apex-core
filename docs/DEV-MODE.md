@@ -250,3 +250,70 @@ python -m doomsday --run --governance-key "<64-byte hex string>"
 5. **Production migration is irreversible.** Once the Genesis Ceremony keys are
    embedded and the on-chain contract is anchored, governance requires the
    cryptographic quorum. You cannot "go back" to dev mode for production.
+
+---
+
+## 6. Alpha development & the self-improvement cycle
+
+> "We do not write 100 years of code. We write the Genesis Codebase — the
+> system's DNA. Once alive, the system writes, tests, and replaces its own code."
+> — AGENTS.md §2
+
+### Current alpha = bootstrap stub
+The Cortex engine (`cortex/cortex/engine.py`) currently emits a simple
+momentum-based proposal: 5% of equity, bullish/bearish direction, vol-halving.
+This is **S2** (System-Owned Stub) — it only proves the pipeline contract.
+The AGENTS.md classifies concrete sizing/signal logic as the system's job.
+
+### How the system learns to be profitable
+Once live, the self-improvement cycle runs continuously:
+
+```
+Market data (S1 adapters)
+     ↓
+Cortex meta-learner discovers patterns
+     ↓  (e.g., "doji candles still show micro-movement on 1-min charts")
+Evolution Sub-Agent generates alpha module (S2)
+     ↓
+Chronos simulation rig backtests (G7, 1000+ years of regimes)
+     ↓
+Kani formal verification (safety invariants must hold)
+     ↓
+Sandbox shadow-trading validates in parallel (G2)
+     ↓
+Patch accepted → new strategy deployed to live Cortex
+```
+
+### Writing your own alpha for testing (dev only)
+To experiment with custom strategies on your laptop:
+
+```python
+# cortex/models/my_strategy.py
+from cortex.proposal_api import OrderDirection, TradeProposal
+from typing import Any
+import uuid
+
+class MyAlphaModel:
+    def generate_proposal(self, market_data: dict[str, Any], equity: float) -> dict:
+        # Your edge: doji micro-movement, VWAP divergence, etc.
+        if self._detect_edge(market_data):
+            return {
+                "status": "ProposalGenerated",
+                "proposal": TradeProposal(
+                    proposal_id=str(uuid.uuid4()),
+                    asset_id=market_data["asset_id"],
+                    direction=OrderDirection.BUY,
+                    target_notional=equity * 0.03,
+                    max_acceptable_slippage=0.0005,
+                ).model_dump(),
+            }
+        return {"status": "NoAction", "proposal": None}
+```
+
+Test via the simulation rig:
+```powershell
+python -m cortex.engine --asset EURUSD --price 1.0800 --equity 100000 --trend bullish --momentum 1
+```
+
+The system will eventually replace your stub with its own meta-learned alpha.
+This is by design — you provide the mechanism, it discovers the edge.

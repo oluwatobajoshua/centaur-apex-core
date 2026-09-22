@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package centaurapex.cortex.strategy.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "io.centaurapex.cortex.strategy.v1";
+option go_package = "centaur-apex/core/cortex/strategy/v1";
+
+message TradeProposal {
+  string proposal_id = 1;
+  string asset_id = 2;
+  OrderDirection direction = 3;
+  double target_notional = 4;
+  double max_acceptable_slippage = 5;
+  google.protobuf.Timestamp expiry = 6;
+  string source_agent_id = 7;
+  repeated string tags = 8;
+  double confidence_score = 9;
+}
+
+enum OrderDirection {
+  ORDER_DIRECTION_UNSPECIFIED = 0;
+  BUY = 1;
+  SELL = 2;
+}
+
+message ProposalBatch {
+  repeated TradeProposal proposals = 1;
+  int64 timestamp_unix = 2;
+}
+
+message StrategySchema {
+  message SizingRule {
+    double fraction_of_equity = 1;
+    double max_notional_usd = 2;
+    double volatility_scalar = 3;
+  }
+
+  message EntrySignal {
+    string name = 1;
+    double threshold = 2;
+    repeated string requires = 3;
+  }
+
+  message ExitSignal {
+    string name = 1;
+    double threshold = 2;
+  }
+
+  string strategy_id = 1;
+  string name = 2;
+  SizingRule sizing = 3;
+  repeated EntrySignal entry_signals = 4;
+  repeated ExitSignal exit_signals = 5;
+}

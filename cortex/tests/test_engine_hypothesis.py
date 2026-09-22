@@ -4,7 +4,7 @@ Per PRD §5: property-based testing against millions of random market scenarios.
 These tests verify invariants that must hold for ANY market tick input.
 """
 from cortex.engine import CortexEngine
-from hypothesis import assume, given, settings
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
 
@@ -27,7 +27,7 @@ class TestCortexEngineProperties:
     })
 
     @given(arb_tick)
-    @settings(max_examples=500)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
     def test_no_action_without_momentum(self, tick):
         """P5: When momentum_signal is False, the engine must return NoAction."""
         tick["momentum_signal"] = False
@@ -36,7 +36,7 @@ class TestCortexEngineProperties:
         assert result["proposal"] is None
 
     @given(arb_tick)
-    @settings(max_examples=500)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
     def test_neutral_trend_always_no_action(self, tick):
         """P6: Neutral trend must always return NoAction (no directional signal)."""
         tick["trend"] = "neutral"
@@ -45,7 +45,7 @@ class TestCortexEngineProperties:
         assert result["status"] == "NoAction"
 
     @given(arb_tick)
-    @settings(max_examples=500)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
     def test_proposal_notional_always_positive(self, tick):
         """P7: Any generated proposal must have target_notional > 0."""
         assume(tick["momentum_signal"] is True)
@@ -56,7 +56,7 @@ class TestCortexEngineProperties:
             assert result["proposal"]["direction"] in ("Buy", "Sell")
 
     @given(arb_tick)
-    @settings(max_examples=500)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
     def test_bullish_generates_buy(self, tick):
         """P8: Bullish + momentum must generate a Buy proposal."""
         tick["momentum_signal"] = True
@@ -66,7 +66,7 @@ class TestCortexEngineProperties:
             assert result["proposal"]["direction"] == "Buy"
 
     @given(arb_tick)
-    @settings(max_examples=500)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
     def test_bearish_generates_sell(self, tick):
         """P9: Bearish + momentum must generate a Sell proposal."""
         tick["momentum_signal"] = True
@@ -76,7 +76,7 @@ class TestCortexEngineProperties:
             assert result["proposal"]["direction"] == "Sell"
 
     @given(arb_tick)
-    @settings(max_examples=500)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
     def test_sizing_proportional_to_equity(self, tick):
         """P10: Higher equity must produce higher or equal notional (for same trend)."""
         tick["momentum_signal"] = True
@@ -95,7 +95,7 @@ class TestCortexEngineProperties:
             assert n2 >= n1, f"higher equity ({tick2['account_equity']}) should yield n2 ({n2}) >= n1 ({n1})"
 
     @given(arb_tick)
-    @settings(max_examples=500)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
     def test_zero_price_no_action(self, tick):
         """P11: Zero or negative price must produce NoAction (no division error)."""
         tick["price"] = 0.0

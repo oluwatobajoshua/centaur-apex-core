@@ -31,6 +31,12 @@ dashboard/out/
 secrets/
 vault/
 
+# Runtime logs / pidfiles
+logs/
+*.pid
+*.log
+*.jsonl
+
 # OS junk
 Thumbs.db
 .DS_Store

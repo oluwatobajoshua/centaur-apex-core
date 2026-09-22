@@ -1,0 +1,242 @@
+{
+  "version": "0.1.0",
+  "families": {
+    "structure": "Liquidity & market-structure mechanics (most durable edges).",
+    "candle_anatomy": "Single/multi-candle shapes. NO standalone edge — context features only.",
+    "statistical": "Time-series anomalies (momentum, reversal, drift). Re-validate per market.",
+    "scheduled": "Macro releases, fixings, expiries. Surprise-vs-consensus processing.",
+    "microstructure": "Order flow, absorption, reporting barriers, cascades.",
+    "volatility": "Volatility clustering, compression/expansion, pinning."
+  },
+  "events": [
+    {
+      "id": "liquidity_sweep",
+      "family": "structure",
+      "mechanism": "Price pierces a stop-cluster level (equal highs/lows 4.2x denser), captures trapped orders, then reclaims.",
+      "machinery": "SweepDetector: wick beyond level -> close back inside within N bars.",
+      "features": ["level", "swept_side", "reclaimed", "proxy_volume_spike"],
+      "thesis": "reject toward the opposite pool",
+      "invalidation": "close beyond the swept level with follow-through",
+      "conversion": "Mean-reversion family; entry on reclaim retest; invalidation stop beyond the wick extreme."
+    },
+    {
+      "id": "fakeout_failed_break",
+      "family": "structure",
+      "mechanism": "Break closes back inside the range; breakout traders trapped; 60-80% of naive breaks fail.",
+      "machinery": "FakeoutDetector: close outside then close back inside.",
+      "features": ["break_side", "reversal_floor", "range_state"],
+      "thesis": "fade toward the opposite edge",
+      "invalidation": "re-break beyond the failure extreme",
+      "conversion": "Mean-reversion fade; stop at failure extreme; target opposite edge."
+    },
+    {
+      "id": "real_breakout",
+      "family": "structure",
+      "mechanism": "Body-close beyond the level with wide body, low wick on break side, follow-through 2-3 bars.",
+      "machinery": "BreakoutDetector (required: body close outside, gap/pressure, momentum alignment).",
+      "features": ["body_close_past_level", "follow_through", "retest_hold"],
+      "thesis": "continuation toward next pool",
+      "invalidation": "close back inside the range",
+      "conversion": "Momentum family; entry on retest-hold; trail via integrity break."
+    },
+    {
+      "id": "coil_expansion",
+      "family": "volatility",
+      "mechanism": "Tight consolidation (range < k*ATR) resolves by expansion; compression precedes runs.",
+      "machinery": "MarketContext RANGE/COIL + EXPANSION; SqueezeDetector (current avg range/ATR vs long window).",
+      "features": ["coil_bounds", "expansion_direction", "squeeze_ratio"],
+      "thesis": "on expansion, ride the run in direction of break",
+      "invalidation": "immediate re-entry into the coil",
+      "conversion": "Momentum family with expanded ATR trail."
+    },
+    {
+      "id": "accel_to_wick_rejection",
+      "family": "candle_anatomy",
+      "mechanism": "Impulse candle 'speeds up' then a wide-range wick candle (shooting star / gravestone / hammer / dragonfly) closes back inside - blowoff",
+      "machinery": "pattern_events.acceleration_rejection.",
+      "features": ["direction", "accel_atr", "rejection_range_atr", "absorbed_fraction"],
+      "thesis": "reversal of the failed impulse",
+      "invalidation": "close beyond the impulse extreme",
+      "conversion": "Mean-reversion family; invalidation stop beyond impulse high/low."
+    },
+    {
+      "id": "impulse_expansion",
+      "family": "volatility",
+      "mechanism": "Single-bar displacement >= k*ATR: old structure broken, volatility regime shifting.",
+      "machinery": "MarketContext EXPANSION (impulse).",
+      "features": ["move_atr", "break_level", "regime_before"],
+      "thesis": "strong continuation odds, but transient overbought",
+      "invalidation": "close back through break_level",
+      "conversion": "Momentum on break with tight initial trail; scale after retest."
+    },
+    {
+      "id": "divergence_regular",
+      "family": "statistical",
+      "mechanism": "Price HH (LL) vs oscillator LH (HL): fuel drying, high-probability exhaustion precursor.",
+      "machinery": "pattern_events.divergence regular.",
+      "features": ["side", "price_pivot_pair", "osc_pivot_pair", "strength"],
+      "thesis": "reversal candidate only at level/structure confluence",
+      "invalidation": "price extends past the last pivot",
+      "conversion": "Enabled only as a filter with structure event; never standalone."
+    },
+    {
+      "id": "divergence_hidden",
+      "family": "statistical",
+      "mechanism": "Price LH (HL) vs oscillator HH (LL): pullback continuation structure in a live trend.",
+      "machinery": "pattern_events.divergence hidden.",
+      "features": ["side", "strength"],
+      "thesis": "trend continuation after shallow pullback",
+      "invalidation": "structure shift (BOS against trend)",
+      "conversion": "Momentum family entry on retest."
+    },
+    {
+      "id": "volatility_compression",
+      "family": "volatility",
+      "mechanism": "Volatility clustering: quiet begets expansion; compression precedes it.",
+      "machinery": "SqueezeDetector (range/ATR compression ratio across windows).",
+      "features": ["sqz_ratio", "duration_bars"],
+      "thesis": "prepare for expansion, direction unknown",
+      "invalidation": "none (timing unknown) - stand aside until expansion",
+      "conversion": "Puts system into scanning/standby; no positioning on compression alone - avoids wasting opportunity early."
+    },
+    {
+      "id": "momentum_extension",
+      "family": "statistical",
+      "mechanism": "Time-series momentum (recent winner continues short-to-medium term). Robust across markets.",
+      "machinery": "MarketContext regime+momentum; CalibrationTracker persistence check.",
+      "features": ["regime", "momentum_atr", "extension_atr"],
+      "thesis": "continuation while structure intact",
+      "invalidation": "momentum flattens and/or integrity break",
+      "conversion": "Momentum family; ATR trail; never add into EXHAUSTION."
+    },
+    {
+      "id": "mean_reversion_extreme",
+      "family": "statistical",
+      "mechanism": "After vertical extension (>= k ATR) price reverts toward value/mean.",
+      "machinery": "MarketContext EXHAUSTION + overshoot of extension_atr_multiple.",
+      "features": ["extension_atr", "distance_from_mean"],
+      "thesis": "partial reversion, fade only at BSL/SSL and with wick rejection",
+      "invalidation": "impulse continues (new EXPANSION)",
+      "conversion": "Mean-reversion family, only with confluence; tight invalidation."
+    },
+    {
+      "id": "surprise_drift",
+      "family": "scheduled",
+      "mechanism": "Scheduled release: market prices surprise-vs-consensus slowly (drift), with initial overreaction.",
+      "machinery": "EventCalendarProvider (release schedule + consensus) + MarketState surprise score.",
+      "features": ["surprise_z", "direction", "initial_spike_vs_drift"],
+      "thesis": "trade drift after the dust settles, not the spike",
+      "invalidation": "missed drift 15 min post - stand aside",
+      "conversion": "Event family; post-event drift with integrity stop."
+    },
+    {
+      "id": "pre_event_compression",
+      "family": "scheduled",
+      "mechanism": "Volatility contracts ahead of high-impact releases, then expands violently.",
+      "machinery": "EventCalendarProvider + SqueezeDetector windows.",
+      "features": ["time_to_release", "compression_ratio"],
+      "thesis": "do NOT hold positions into the release",
+      "invalidation": "none",
+      "conversion": "Stand-aside primitive: flatten pre-release (anti-waste, anti-giveback)."
+    },
+    {
+      "id": "session_open_engulf",
+      "family": "microstructure",
+      "mechanism": "London/NY opens concentrate liquidity and often mark the day's direction; thin sessions (Tokyo lunch, NY-close) spike and retrace.",
+      "machinery": "SessionPhaseProvider (session calendar on trading book) + anatomy at session open.",
+      "features": ["session", "open_range_vs_adr", "engulf_at_open"],
+      "thesis": "trade the open impulse with the day's structure; avoid thin-session spikes",
+      "invalidation": "open fails (reclaims origin)",
+      "conversion": "Time-of-day family; session gating from Governance; avoids low-liquidity traps."
+    },
+    {
+      "id": "fixing_rollover",
+      "family": "scheduled",
+      "mechanism": "WMR London 4pm fix and 5pm EST rollover concentrate order flow; tom-next rolls express carry.",
+      "machinery": "EventCalendarProvider (fixing schedule) + order-flow proxy.",
+      "features": ["fixing_time_seconds", "carry_rate"],
+      "thesis": "avoid participation during fix spikes; harvest carry-based flows across rollover only if calibrated",
+      "invalidation": "none",
+      "conversion": "Stand-aside + carry harvesting; low-frequency, capital-efficient."
+    },
+    {
+      "id": "liquidation_cascade",
+      "family": "microstructure",
+      "mechanism": "Leveraged-liquidations push price beyond value then snap back (cascades exhaust counterparty).",
+      "machinery": "MarketState cascade proxy (vertical expansion into liquidity + violent reversal).",
+      "features": ["cascade_leg_atr", "snap_back_atr"],
+      "thesis": "fade the cascade tail only after snap-back confirmation",
+      "invalidation": "sustained acceptance beyond cascade extreme",
+      "conversion": "Mean-reversion family with invalidation beyond cascade extreme."
+    },
+    {
+      "id": "expiry_pinning",
+      "family": "scheduled",
+      "mechanism": "Options expiry (third Friday) pulls IVOL - pinning and expiry-week distortion; reversal after expiry.",
+      "machinery": "EventCalendarProvider (expiry) + IVOL/vol anomaly.",
+      "features": ["days_to_expiry", "pivot_difference"],
+      "thesis": "beware pinning; skew trading after pin resolves",
+      "invalidation": "none (timing dominant)",
+      "conversion": "Sizing guard / stand-aside near expiry; no new momentum entries into pin."
+    },
+    {
+      "id": "pullback_armed",
+      "family": "structure",
+      "mechanism": "Price retraces into the ATR-normalised healthy zone (0.25-0.65 of the impulse; deeper = turning into reversal).",
+      "machinery": "PullbackTracker: impulse leg + normalized depth + structure anchor.",
+      "features": ["depth_ratio", "depth_percentile", "impulse_atr"],
+      "thesis": "impulse intact - bank what was obtainable, lay up the re-entry",
+      "invalidation": "retrace deepens beyond 0.65 of the impulse",
+      "conversion": "Re-entry on resumption confirmation (pullback_resumed)."
+    },
+    {
+      "id": "pullback_resumed",
+      "family": "structure",
+      "mechanism": "Impulse resumes past its extreme after a healthy pullback - the move continues.",
+      "machinery": "PullbackTracker RESUMED transition.",
+      "features": ["direction", "pullback_depth", "depth_percentile"],
+      "thesis": "re-enter with the impulse; never re-enter a broken structure",
+      "invalidation": "close back through the pullback low (bull) / high (bear)",
+      "conversion": "Momentum re-entry under the resumption pivot."
+    },
+    {
+      "id": "pullback_broken",
+      "family": "structure",
+      "mechanism": "Structure anchor violated: the correction has become a reversal (the 'red after green' event).",
+      "machinery": "PullbackTracker BROKEN transition.",
+      "features": ["anchor", "close", "impulse_atr"],
+      "thesis": "stand out with profits banked - the impulse is over",
+      "invalidation": "price reclaims the anchor within this candle",
+      "conversion": "Exit/protection primitive; no fade until the opposite structure forms."
+    },
+    {
+      "id": "streak_stress_reversal",
+      "family": "statistical",
+      "mechanism": "After extended same-direction closes (3+ consecutive daily-ish candles) reversal base rates reach ~87-88% - mean reversion at the daily extreme.",
+      "machinery": "CandleSequenceStats.observe_streak_extreme (measures THIS instrument's own history).",
+      "features": ["streak_len", "p_reverse", "sample_n"],
+      "thesis": "prepare to protect/extract profits at streak extremes rather than chase",
+      "invalidation": "streak extends (new high/low accepted by the market)",
+      "conversion": "Profit-protection + re-entry-on-pullback trigger, not a blind reversal bet."
+    },
+    {
+      "id": "extension_exhaustion",
+      "family": "statistical",
+      "mechanism": "Once extended >= k ATR in one session/leg, continuation base rates collapse and exhaustion/reversion odds rise.",
+      "machinery": "MarketContext EXHAUSTION + momentum_extension guard (never add into EXHAUSTION).",
+      "features": ["extension_atr", "continuation_p_measured"],
+      "thesis": "do not add; protect gains already banked",
+      "invalidation": "fresh impulse extension (new EXPANSION)",
+      "conversion": "Anti-waste guard on Momentum family; trail tightly."
+    }
+  ],
+  "principles": [
+    "Context-conditional edges only: pattern/event alone is never a signal; confluence (level, trend, session, vol state) required.",
+    "Empirical calibration gate: every event carries an entering thesis; calibration tracks realized edge vs predicted; events that fail the baseline are downweighted. ~28% of naive pattern edges are notable, many opposite to textbook - never trust textbook.",
+    "Anti-event awareness: system tracks both thesis and anti-thesis; stays neutral when ambiguous (no wasted moves).",
+    "Structure mechanics > faded anomalies: liquidity/structure/volatility/momentum mechanics are preferred over calendar effects (mostly faded since 1980).",
+    "Deploy from history: never trust textbook base rates. Every probability the system quotes MUST be fit point-in-time on the instrument's own history (sequence_stats, depth percentiles, streak reversals) before it earns live weight.",
+    "Join, never fight: the system always asks 'what is the market doing right now' (regime/phase/bias) and trades WITH the current intent - never against it. Fighting the tape is how drawdown is born.",
+    "I5 / zero-alpha compliance: this catalog is DATA (schema) + machinery; concrete sizing/entry logic is system-written alpha (S2), gated by the Constitution."
+  ]
+}
