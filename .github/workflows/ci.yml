@@ -22,7 +22,7 @@ jobs:
       run:
         working-directory: constitution
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -57,7 +57,7 @@ jobs:
     name: Python — compile + unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -88,7 +88,7 @@ jobs:
       run:
         working-directory: constitution
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -139,7 +139,7 @@ jobs:
       run:
         working-directory: constitution
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust toolchain + Kani
         uses: model-checking/kani-github-action@v1
@@ -174,7 +174,7 @@ jobs:
     name: Gateway — NestJS build + unit + e2e
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -209,7 +209,7 @@ jobs:
     name: Security — secrets + dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Secret scanning (gitleaks)
         uses: gitleaks/gitleaks-action@v2
